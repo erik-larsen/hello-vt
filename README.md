@@ -1,6 +1,6 @@
 # Hello Virtual Texturing
 
-![VT sample app](media/hello_vt.png)
+![VT sample app](media/hello-vt.png)
 
 A minimal yet complete implementation of virtual texturing that is cross-platform and provides a reference sample app.
 
