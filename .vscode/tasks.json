@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Make (Mac & Windows)",
+            "type": "shell",
+            "command": "make",
+            "args": ["-C", "${workspaceFolder}/Sample"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        }
+    ]
+}

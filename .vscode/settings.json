@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "filesystem": "cpp",
+        "__locale": "cpp",
+        "*.ipp": "cpp",
+        "chrono": "cpp",
+        "functional": "cpp"
+    }
+}

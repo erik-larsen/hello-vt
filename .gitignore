@@ -1,0 +1,5 @@
+*.o
+*.def
+*.exp
+.DS_Store
+**/archive/

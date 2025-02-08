@@ -1,0 +1,41 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/homebrew/include",
+                "${workspaceFolder}/Dependencies/include",
+                "${workspaceFolder}/Dependencies/source",
+                "${workspaceFolder}/Dependencies/include/OpenGLES"
+            ],
+            "defines": [
+                "TARGET_GLES"
+            ],
+            "macFrameworkPath": [
+                "/Library/Frameworks"
+            ],
+            "compilerPath": "/usr/bin/clang++",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "macos-clang-arm64"
+        },
+        {
+            "name": "Win",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/Dependencies/include",
+                "${workspaceFolder}/Dependencies/source",
+                "${workspaceFolder}/Dependencies/include/OpenGLES"
+            ],
+            "defines": [
+                "TARGET_GLES"
+            ],
+            "compilerPath": "C:/Program Files/LLVM/bin/clang++.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "windows-clang-x64"
+        }
+    ],
+    "version": 4
+} 
