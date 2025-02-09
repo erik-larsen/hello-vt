@@ -8,7 +8,7 @@ This work is an OpenGLES-specific and modernized fork of [LibVT](https://github.
 
 Goals:
 
-- Provide a minimal example of virtual texturing for comprehension and to serve as a building block for other projects.  Virtual texturing is a complex enough topic without extra baggage to understand. And having only essential code as a starting point makes it easier to integrate into other projects.
+- Provide a minimal example of virtual texturing to help in learning the algorithm and to serve as a building block for other projects.
 
 - Enable cross platform native builds on Mac, Windows, and Linux, and a future WebGL build via Emscripten.  To this end, C++ and OpenGLES were chosen from the start.
 
