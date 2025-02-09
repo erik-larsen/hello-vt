@@ -18,7 +18,7 @@ ifeq ($(OS),Darwin)
     endif
 	OS_DEFS =
 	GLES_LIBS_PATH = ../Dependencies/lib-$(OS)
-	LD_FLAGS = -Wl,-rpath,@executable_path/$(GLES_LIBS_PATH)
+	LD_FLAGS = -Wl,-rpath,@executable_path/../$(GLES_LIBS_PATH)
 	GLES_LIB_FILES = libGLESv2.dylib libEGL.dylib
 define GLES_INSTALL
 	for lib in $(GLES_LIB_FILES); \
