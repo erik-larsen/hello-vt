@@ -8,6 +8,7 @@
 //     vec4 -- 4 element vector of floats (4th component used for homogenous computations)
 //     mat4x4 -- 4 by 4 elements matrix, computations are done in column major order
 //     quat -- quaternion
+//
 // The types are deliberately named like the types in GLSL. In fact they are meant to be used 
 // for the client side computations and passing to same typed GLSL uniforms.
 //
@@ -15,11 +16,16 @@
 //     clamp()
 //     mat4x4_print()
 //     mat4x4_scale_iso()
+//     M_PI
 //
 #ifndef LINMATH_H
 #define LINMATH_H
 
 #include <math.h>
+
+#ifndef M_PI
+#define M_PI 3.141592653589793 // 64-bit
+#endif
 
 #ifdef LINMATH_NO_INLINE
 #define LINMATH_H_FUNC static

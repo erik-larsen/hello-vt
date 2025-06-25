@@ -167,15 +167,15 @@ You should have received a copy of the GNU Lesser General Public License along w
 #include <string>
 
 #undef TIME_UTC
-#include <boost/thread/thread.hpp>
-#include <boost/thread/condition.hpp>
-#include <boost/cstdint.hpp>
+// #include <boost/thread/thread.hpp>
+// #include <boost/thread/condition.hpp>
+// #include <boost/cstdint.hpp>
 
 void vtShutdown();
 static inline void vt_fatal(const char *err, ...) {va_list ap; va_start (ap, err); vtShutdown(); vfprintf (stderr, err, ap); va_end (ap); exit(1); }
 
 using namespace std;
-using namespace boost;
+//using namespace boost;
 
 
 enum {

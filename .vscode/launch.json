@@ -21,10 +21,17 @@
             "name": "Debug (Windows)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/Sample/bin/vtdemo.exe",
+            "program": "${workspaceFolder}/Sample/bin-win-x86_64/vtdemo.exe",
             "args": [],
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}/Sample",
-            "preLaunchTask": "make"
+            "environment": [
+                { "name": "PATH", "value": "C:\\msys64\\clang64\\bin;${env:PATH}" }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "c:\\msys64\\clang64\\bin\\gdb.exe",
+            "preLaunchTask": "Make (Mac & Windows)"
         }
     ]
 }

@@ -32,7 +32,7 @@ else ifeq ($(OS),Linux)
 	PKG_PATH = /usr
 	OS_DEFS = -Dlinux
 	GLES_LIBS_PATH = ../Dependencies/lib-$(OS)
-	LD_FLAGS = -pthread
+	LD_FLAGS =
 	GLES_LIB_FILES = libGLESv2.so libEGL.so
 define GLES_INSTALL
 	for lib in $(GLES_LIB_FILES); \
@@ -45,7 +45,7 @@ else
 	OS = win
 	HW = x86_64
     PKG_PATH = /c/msys64/clang64
-	OS_DEFS = -DWIN32 -DBOOST_USE_WINDOWS_H
+	OS_DEFS = -DWIN32
 	GLES_LIBS_PATH = ../Dependencies/lib-$(OS)
 	LD_FLAGS = -Wl,/subsystem:console
 	GLES_LIB_FILES = libGLESv2.dll libEGL.dll
@@ -77,7 +77,8 @@ DEFS =
 OPT_DEBUG = -O0 -g
 OPT_NDEBUG = -DNDEBUG -O3
 OPT = $(OPT_DEBUG)
-CFLAGS = -std=c++11 $(WARN) $(DEFS) $(OPT)
+CFLAGS = -std=c++11 -pthread $(WARN) $(DEFS) $(OPT)
+LD_FLAGS += -pthread
 
 # Target executable
 ifeq ($(OS),mac)
@@ -100,7 +101,7 @@ $(BIN_DIR)/%.o: $(SRC_DIR)/%.cpp $(HDRS) | $(BIN_DIR)
 	$(CLANG) $(CFLAGS) $(PKG_INC) $(SDL_INC) $(GLES_INC) $(VT_INC) -c $< -o $@
 
 $(SAMPLE): $(OBJS) $(VT_LIB) | $(BIN_DIR)
-	$(CLANG) $(OBJS) $(PKG_LIB_PATH) -L$(GLES_LIBS_PATH) $(SDL_LIBS) $(GLES_LIBS) $(VT_LIB) $(LD_FLAGS) -o $@
+	$(CLANG) $(LD_FLAGS) $(OBJS) $(PKG_LIB_PATH) -L$(GLES_LIBS_PATH) $(SDL_LIBS) $(GLES_LIBS) $(VT_LIB) -o $@
 	$(call GLES_INSTALL)
 	@echo
 	@echo BUILT: $@

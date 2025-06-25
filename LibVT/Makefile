@@ -21,12 +21,11 @@ else ifeq ($(OS),Linux)
 	HW = x86_64
 	PKG_PATH = /usr
 	OS_DEFS = -Dlinux -D_REENTRANT
-	OS_CFLAGS = -pthread
 else
 	OS = win
 	HW = x86_64
     PKG_PATH = /c/msys64/clang64
-	OS_DEFS = -DWIN32 -DBOOST_USE_WINDOWS_H
+	OS_DEFS = -DWIN32
 endif
 
 BIN_DIR = ./bin-$(OS)-$(HW)
@@ -43,7 +42,7 @@ DEFS = -DTARGET_GLES $(OS_DEFS)
 OPT_DEBUG = -O0 -g
 OPT_NDEBUG = -DNDEBUG -O3
 OPT = $(OPT_DEBUG)
-CFLAGS = -std=c++11 $(WARN) $(DEFS) $(OPT) $(OS_CFLAGS)
+CFLAGS = -std=c++11 -pthread $(WARN) $(DEFS) $(OPT)
 AR = ar rvsc
 
 # Target library

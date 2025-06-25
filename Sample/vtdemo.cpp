@@ -29,7 +29,6 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_opengles2.h>
-#include <cml/constants.h>
 #include "linmath.h"
 #include "LibVT.h"
 
@@ -200,32 +199,44 @@ void initTexRect()
     initTexRectGeometry();
 }
 
-void renderTexRect()
+void setupQuadVertexAttributes(GLuint shader, const char* posAttribName, const char* texAttribName)
 {
-    glActiveTexture(GL_TEXTURE0);
-    glUseProgram(texRectShader);
+    GLint posAttrib = glGetAttribLocation(shader, posAttribName);
+    GLint texAttrib = glGetAttribLocation(shader, texAttribName);
 
-    GLint posAttrib = glGetAttribLocation(texRectShader, "position");
-    GLint texAttrib = glGetAttribLocation(texRectShader, "texcoord");
-        
     glEnableVertexAttribArray(posAttrib);
     glEnableVertexAttribArray(texAttrib);
 
-    glBindBuffer(GL_ARRAY_BUFFER, texRectVBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, texRectEBO);
+    // Stride is 5 floats (3 for pos, 2 for tex)
+    const GLsizei stride = 5 * sizeof(float);
+    // Position attribute starts at the beginning of the vertex data
+    const void* posOffset = (void*)0;
+    // Texture coordinate attribute starts after the 3 position floats
+    const void* texOffset = (void*)(3 * sizeof(float));
 
     glVertexAttribPointer(posAttrib,            // attribute index
                           3,                    // size (x,y,z = 3)
                           GL_FLOAT,             // type
                           GL_FALSE,             // normalized?
-                          5 * sizeof(float),    // stride (skip 5 floats to get to next vertex)
-                          (void*)0);            // offset (position starts at beginning)
+                          stride,               // stride (skip 5 floats to get to next vertex)
+                          posOffset);           // offset (position starts at beginning)
     glVertexAttribPointer(texAttrib,            // attribute index
                           2,                    // size (u,v = 2)
                           GL_FLOAT,             // type
                           GL_FALSE,             // normalized?
-                          5 * sizeof(float),    // stride (same as above)
-                          (void*)(3 * sizeof(float)));  // offset (skip 3 floats to get to texcoords)
+                          stride,               // stride (same as above)
+                          texOffset);           // offset (skip 3 floats to get to texcoords)
+}
+
+void renderTexRect()
+{
+    glActiveTexture(GL_TEXTURE0);
+    glUseProgram(texRectShader);
+
+    glBindBuffer(GL_ARRAY_BUFFER, texRectVBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, texRectEBO);
+
+    setupQuadVertexAttributes(texRectShader, "position", "texcoord");
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
@@ -308,30 +319,12 @@ void renderVTGeometry(GLuint shader)
 {
     glUseProgram(shader);
 
-    GLint posAttrib = glGetAttribLocation(shader, "vertex");
-    GLint texAttrib = glGetAttribLocation(shader, "texcoord0");
-    
-    glEnableVertexAttribArray(posAttrib);
-    glEnableVertexAttribArray(texAttrib);
-
     glBindBuffer(GL_ARRAY_BUFFER, vtVBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vtEBO);
 
-    glVertexAttribPointer(posAttrib,            // attribute index
-                          3,                    // size (x,y,z = 3)
-                          GL_FLOAT,             // type
-                          GL_FALSE,             // normalized?
-                          5 * sizeof(float),    // stride (skip 5 floats to get to next vertex)
-                          (void*)0);            // offset (position starts at beginning)
-    glVertexAttribPointer(texAttrib,            // attribute index
-                          2,                    // size (u,v = 2)
-                          GL_FLOAT,             // type
-                          GL_FALSE,             // normalized?
-                          5 * sizeof(float),    // stride (same as above)
-                          (void*)(3 * sizeof(float)));  // offset (skip 3 floats to get to texcoords)
+    setupQuadVertexAttributes(shader, "vertex", "texcoord0");
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
 }
 
 void renderVT()
@@ -571,35 +564,37 @@ bool processEventsSDL()
     bool running = true;
 
     SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-
+    while (SDL_PollEvent(&event)) 
+    {
+        switch (event.type) 
+        {
             case SDL_QUIT: 
                 running = false;
                 break;
 
             case SDL_KEYDOWN: 
-            {
-                const Uint8* keyStates = SDL_GetKeyboardState(NULL);
+                {
+                    const Uint8* keyStates = SDL_GetKeyboardState(NULL);
 
-                // Quit
-                if (keyStates[SDL_SCANCODE_ESCAPE]) 
-                    running = false;
-                
-                // Reset view
-                else if (keyStates[SDL_SCANCODE_R])
-                    resetViewCam();
+                    // Quit
+                    if (keyStates[SDL_SCANCODE_ESCAPE]) 
+                        running = false;
+                    
+                    // Reset view
+                    else if (keyStates[SDL_SCANCODE_R])
+                        resetViewCam();
 
-                // Continuous panning
-                if (keyStates[SDL_SCANCODE_LEFT])
-                    panCam(-1, 0);
-                if (keyStates[SDL_SCANCODE_RIGHT])
-                    panCam(1, 0);
-                if (keyStates[SDL_SCANCODE_UP])
-                    panCam(0, 1);
-                if (keyStates[SDL_SCANCODE_DOWN])
-                    panCam(0, -1);
-            }
+                    // Continuous panning
+                    if (keyStates[SDL_SCANCODE_LEFT])
+                        panCam(-1, 0);
+                    if (keyStates[SDL_SCANCODE_RIGHT])
+                        panCam(1, 0);
+                    if (keyStates[SDL_SCANCODE_UP])
+                        panCam(0, 1);
+                    if (keyStates[SDL_SCANCODE_DOWN])
+                        panCam(0, -1);
+                }
+                break;
 
             case SDL_WINDOWEVENT: 
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED)

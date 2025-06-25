@@ -5,10 +5,12 @@
             "label": "Make (Mac & Windows)",
             "type": "shell",
             "command": "make",
-            "args": ["-C", "${workspaceFolder}/Sample"],
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/Sample"
             },
             "problemMatcher": [
                 "$gcc"
