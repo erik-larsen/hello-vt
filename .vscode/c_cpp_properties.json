@@ -5,9 +5,9 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/homebrew/include",
-                "${workspaceFolder}/Dependencies/include",
-                "${workspaceFolder}/Dependencies/source",
-                "${workspaceFolder}/Dependencies/include/OpenGLES"
+                "${workspaceFolder}/deps/include",
+                "${workspaceFolder}/deps/source",
+                "${workspaceFolder}/deps/include/OpenGLES"
             ],
             "defines": [
                 "TARGET_GLES"
@@ -24,9 +24,9 @@
             "name": "Win",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/Dependencies/include",
-                "${workspaceFolder}/Dependencies/source",
-                "${workspaceFolder}/Dependencies/include/OpenGLES"
+                "${workspaceFolder}/deps/include",
+                "${workspaceFolder}/deps/source",
+                "${workspaceFolder}/deps/include/OpenGLES"
             ],
             "defines": [
                 "TARGET_GLES"

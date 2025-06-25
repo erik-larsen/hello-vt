@@ -14,7 +14,7 @@ Goals:
 
 - Supply a reference sample that demonstrates the LibVT calls necessary to load and render a virtual texture, while utilizing SDL for cross-platform windowing and event handling.
 
-NOTE: This code is work in progress.  More code minimization needs to be done, multi-threading is not enabled yet, and an Emscripten build is pending.  But at least an interactive demo is now available on Mac, Windows, and Linux.
+NOTE: This code is work in progress.  More code minimization needs to be done and an Emscripten build is pending.  But at least an interactive demo is now available on Mac, Windows, and Linux.
 
 
 ## Sample
@@ -87,7 +87,7 @@ sudo apt update
 sudo apt install build-essential clang
 sudo apt install libsdl2-dev libsdl2-image-dev
 sudo apt install chromium
-cp /usr/lib/chromium/*.so hello-vt/Dependencies/lib-linux
+cp /usr/lib/chromium/*.so hello-vt/deps/lib-linux
 ```
 
 Then to build and run:
@@ -109,13 +109,13 @@ Instead, LibVT was chosen for its C++ implementation, OpenGLES code path, and de
 
 
 ## Future work
-- Multi-threading!  Virtual texturing must at least have a separate image file loading thread.
-- Fix all compiler warnings across all platforms.
+- Add WebGL 1 and 2 builds via Emscripten, using the OpenGL ES 2 and 3 code paths, respectively.
 - Add OpenGLES 3 native build.
 - Minimize LibVT code to OpenGLES 2 and 3 code paths only.  So far, only the shaders have been simplified for OpenGLES 2.
-- Add WebGL 1 and 2 builds via Emscripten, using the OpenGL ES 2 and 3 code paths, respectively.
+- Fix all compiler warnings across all platforms.
 - Visualize virtual and physical textures for debugging
 - Handle more image formats (currently PNG only)
+- Auto configure LibVT based on input image
 
 
 ## Authors

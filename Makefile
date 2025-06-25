@@ -1,4 +1,4 @@
-SUBDIRS = LibVT Sample
+SUBDIRS = libvt sample
 
 .PHONY: all clean $(SUBDIRS)
 
