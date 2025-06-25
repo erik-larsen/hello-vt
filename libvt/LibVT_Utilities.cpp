@@ -1,20 +1,3 @@
-/*
- *  LibVT_Utilities.cpp
- *
- *
- *  Created by Julian Mayer on 07.10.09.
- *  Copyright 2009 A. Julian Mayer. 
- *
- */
-
-/*
- This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3.0 of the License, or (at your option) any later version.
- 
- This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
- 
- You should have received a copy of the GNU Lesser General Public License along with this library; if not, see <http://www.gnu.org/licenses/> or write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
-
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
@@ -144,7 +127,7 @@ void * vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_s
 		printf("Error: tried to load nonexisting file");
 		return NULL;
 	}
-#if defined(__APPLE__) && (!(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE))
+#if defined(__APPLE__)
 	fcntl(f->_file, F_GLOBAL_NOCACHE, 1); // prevent the OS from caching this file in RAM
 #endif
 	assert(f);

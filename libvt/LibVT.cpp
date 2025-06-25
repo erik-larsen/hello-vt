@@ -1,20 +1,3 @@
-/*
- *  LibVT.cpp
- *
- *
- *  Created by Julian Mayer on 07.10.09.
- *  Copyright 2009 A. Julian Mayer. 
- *
- */
-
-/*
- This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3.0 of the License, or (at your option) any later version.
- 
- This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
- 
- You should have received a copy of the GNU Lesser General Public License along with this library; if not, see <http://www.gnu.org/licenses/> or write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
-
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
@@ -39,8 +22,7 @@ void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pag
 	assert((MAX_RAMCACHE_MB >= 50));
 	assert((HIGHEST_MIP_LEVELS_TO_KEEP >= 0) && (HIGHEST_MIP_LEVELS_TO_KEEP <= 5) && ((float)HIGHEST_MIP_LEVELS_TO_KEEP <= _mipChainLength));
 	assert(!(READBACK_MODE_NONE && USE_PBO_READBACK));
-	if (OPENCL_BUFFERREDUCTION) assert((READBACK_MODE_FBO || READBACK_MODE == kBackbufferGetTexImage || READBACK_MODE == kCustomReadback));
-	if (OPENCL_BUFFERREDUCTION) assert(!USE_PBO_READBACK);
+
 #if GL_ES_VERSION_2_0
 	assert(READBACK_MODE == kBackbufferReadPixels);
 	assert(ANISOTROPY == 0);
@@ -72,11 +54,7 @@ void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pag
 	}
 	else
 	{
-#ifdef TARGET_OS_IPHONE
-		if (IMAGE_DECOMPRESSION_LIBRARY == DecompressionMac || TARGET_OS_IPHONE)
-#else
 		if (IMAGE_DECOMPRESSION_LIBRARY == DecompressionMac )			
-#endif			
 		{
 			c.pageDataFormat = GL_BGRA;
 			c.pageDataType = GL_UNSIGNED_INT_8_8_8_8_REV;
@@ -306,13 +284,10 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, ANISOTROPY);
 #endif
 
-
 	if (c.pageDXTCompression)
 		glCompressedTexImage2D(GL_TEXTURE_2D, 0, c.pageDXTCompression, PHYS_TEX_DIMENSION, PHYS_TEX_DIMENSION, 0, c.pageMemsize * c.physTexDimensionPages * c.physTexDimensionPages, NULL);
 	else
 		glTexImage2D(GL_TEXTURE_2D, 0, c.pageDataFormat == GL_RGB ? GL_RGB : GL_RGBA, PHYS_TEX_DIMENSION, PHYS_TEX_DIMENSION, 0, c.pageDataFormat, c.pageDataType, NULL);
-
-
 
 	if (MIPPED_PHYSTEX)
 	{
@@ -321,8 +296,6 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
 #endif
 		glTexImage2D(GL_TEXTURE_2D, 1, c.pageDataFormat == GL_RGB ? GL_RGB : GL_RGBA, PHYS_TEX_DIMENSION / 2, PHYS_TEX_DIMENSION / 2, 0, c.pageDataFormat, c.pageDataType, NULL);
 	}
-
-
 
 	glGenTextures(1, &vt.pageTableTexture);
 	glActiveTexture(GL_TEXTURE0 + TEXUNIT_FOR_PAGETABLE);
@@ -334,7 +307,6 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 	for (uint8_t i = 0; i < c.mipChainLength; i++)
 		glTexImage2D(GL_TEXTURE_2D, i, GL_RGBA, c.virtTexDimensionPages >> i, c.virtTexDimensionPages >> i, 0, GL_RGBA, GL_UNSIGNED_BYTE, vt.pageTables[i]); // {GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV} doesn't seem to be faster
-
 
 	if (USE_MIPCALC_TEXTURE)
 	{
@@ -371,7 +343,6 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
 		free(mipcalcTables);
 	}
 
-
 	if (READBACK_MODE_FBO || READBACK_MODE == kBackbufferGetTexImage)
 	{
 		glGenTextures(1, &vt.fboColorTexture);
@@ -394,7 +365,6 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
 		glBufferData(GL_PIXEL_UNPACK_BUFFER, (vt.pageTableMipOffsets[c.mipChainLength - 1] + 1) * 4, 0, GL_STREAM_DRAW);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	}
-
 
 	if (USE_PBO_PHYSTEX)
 	{
@@ -447,7 +417,6 @@ void vtShutdown()
 	free(vt.pageTables[0]);
 	free(vt.pageTables);
 
-
 	if (!USE_PBO_READBACK)
 		free(vt.readbackBuffer);
 
@@ -482,7 +451,6 @@ void vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, c
 	vt.w = _w >> PREPASS_RESOLUTION_REDUCTION_SHIFT;
 	vt.h = _h >> PREPASS_RESOLUTION_REDUCTION_SHIFT;
 	vt.fovInDegrees = fovInDegrees;
-
 
 #if !GL_ES_VERSION_2_0
 	if (READBACK_MODE_FBO || READBACK_MODE == kBackbufferGetTexImage)
@@ -528,7 +496,7 @@ void vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, c
 	}
 #endif
 
-	if (!USE_PBO_READBACK && !READBACK_MODE_NONE && !OPENCL_BUFFERREDUCTION)
+	if (!USE_PBO_READBACK && !READBACK_MODE_NONE)
 	{
 		if (vt.readbackBuffer)
 			free(vt.readbackBuffer);
@@ -538,20 +506,6 @@ void vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, c
 
 	if (PREPASS_RESOLUTION_REDUCTION_SHIFT && fovInDegrees > 0.0)
 		vtuPerspective(vt.projectionMatrix, fovInDegrees, (float)vt.w / (float)vt.h, nearPlane, farPlane);
-
-
-#if OPENCL_BUFFERREDUCTION
-	if (READBACK_MODE == kCustomReadback)
-	{
-		vtReshapeOpenCL(_w >> OPENCL_REDUCTION_SHIFT, _h >> OPENCL_REDUCTION_SHIFT);
-		assert(!PREPASS_RESOLUTION_REDUCTION_SHIFT);
-	}
-	else
-	{
-		vtReshapeOpenCL(vt.w, vt.h);
-		assert(!OPENCL_REDUCTION_SHIFT);
-	}
-#endif
 }
 
 float vtGetBias()

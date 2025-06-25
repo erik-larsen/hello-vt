@@ -1,20 +1,3 @@
-/*
- *  LibVT_PageTable.cpp
- *
- *
- *  Created by Julian Mayer on 05.03.10.
- *  Copyright 2009 A. Julian Mayer. 
- *
- */
-
-/*
- This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3.0 of the License, or (at your option) any later version.
- 
- This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
- 
- You should have received a copy of the GNU Lesser General Public License along with this library; if not, see <http://www.gnu.org/licenses/> or write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
-
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
@@ -24,23 +7,16 @@ extern vtConfig c;
 void _mapPageFallbackEntries(int m, int x_coord, int y_coord, int mip, int x, int y);
 void _unmapPageFallbackEntries(int m, int x_coord, int y_coord, int x_search, int y_search, int mip_repl, int x_repl, int y_repl);
 
-
 //void __debugEraseCachedPages();
 //#define DEBUG_ERASE_CACHED_PAGES_EVERY_FRAME
-
-
-
 
 void vtMapNewPages()
 {
 	queue<uint32_t>	newPages, zero;
 
-
 #if !ENABLE_MT
 	vtLoadNeededPages();
 #endif
-
-
 	{	// lock
 		LOCK(vt.newPagesMutex)
 
@@ -86,8 +62,6 @@ void vtMapNewPages()
 #endif
 		}
 
-
-
 #if USE_PBO_PHYSTEX
 		uint8_t xCoordinatesForPageMapping[PBO_PHYSTEX_PAGES];
 		uint8_t yCoordinatesForPageMapping[PBO_PHYSTEX_PAGES];
@@ -99,8 +73,6 @@ void vtMapNewPages()
 		uint8_t *phys_buffer = (uint8_t *)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
 		assert(phys_buffer);
 #endif
-
-
 		glActiveTexture(GL_TEXTURE0 + TEXUNIT_FOR_PHYSTEX);
 
 		while(!newPages.empty() && foundSlot)
@@ -116,9 +88,8 @@ void vtMapNewPages()
 			uint8_t x, y, storedX = 0, storedY = 0;
 			clock_t lowestClock = vt.thisFrameClock;
 
-			foundSlot = false;
-
 			// find least recently used or free page
+			foundSlot = false;
 			for (x = 0; x < c.physTexDimensionPages; x++)
 			{
 				for (y = 0; y < c.physTexDimensionPages; y++)
@@ -140,7 +111,6 @@ void vtMapNewPages()
 				if (foundFree)
 					break;
 			}
-
 
 			if (foundSlot)
 			{
@@ -168,10 +138,7 @@ void vtMapNewPages()
 				vt.textureStorageInfo[x][y].mip = mip;
 				vt.textureStorageInfo[x][y].clockUsed = vt.thisFrameClock;
 
-
-
 				PAGE_TABLE(mip, x_coord, y_coord) = (MIP_INFO(mip) << 24) + (x << 16) + (y << 8) + kTableMapped;
-
 
 				touchMipRow(mip, y_coord)
 
@@ -194,8 +161,6 @@ void vtMapNewPages()
 
 				newPageCount ++;
 #else
-
-
 				if (c.pageDXTCompression)
 					glCompressedTexSubImage2D(GL_TEXTURE_2D, 0, x * c.pageDimension, y * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDXTCompression, c.pageMemsize, image_data);
 				else
@@ -222,9 +187,7 @@ void vtMapNewPages()
 				LOCK(vt.newPagesMutex)
 
 				printf("WARNING: skipping page loading because there are no free slots %i %i \n", vt.necessaryPageCount, c.physTexDimensionPages * c.physTexDimensionPages);
-
 				vt.newPages.push(pageInfo);
-
 				while (!newPages.empty())
 				{
 					vt.newPages.push(newPages.front());newPages.pop();
@@ -382,8 +345,6 @@ void vtUnmapPageCompleteley(int mipmap_level, int x_coord, int y_coord, int x_st
 	vt.textureStorageInfo[x_storage_location][y_storage_location].mip = 0;
 	vt.textureStorageInfo[x_storage_location][y_storage_location].clockUsed = 0;
 }
-
-
 
 void __debugEraseCachedPages()
 {

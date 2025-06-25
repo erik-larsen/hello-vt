@@ -1,66 +1,28 @@
-/*
- *  LibVT_Internal.h
- *
- *
- *  Created by Julian Mayer on 07.10.09.
- *  Copyright 2009 A. Julian Mayer. 
- *
- */
-
-/*
-This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3.0 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License along with this library; if not, see <http://www.gnu.org/licenses/> or write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-*/
-
 #include "LibVT_Config.h"
-
 
 #include <time.h>
 #include <assert.h>
 #include <math.h>
 #include <sys/types.h>
 
-
-#if defined(__APPLE__) && defined(__x86_64__)
-// This block will only be executed on Intel Macs
-#undef TIME_UTC
-#endif
+// TARGET_GLES
+#include <OpenGLES/GLES2/gl2.h>
+#include <OpenGLES/GLES2/gl2ext.h>
+#define glBindFramebufferEXT glBindFramebuffer
+#define glOrtho glOrthof
+#define GL_FRAMEBUFFER_EXT	GL_FRAMEBUFFER
+#define glDeleteFramebuffersEXT glDeleteFramebuffers
+#define glGenFramebuffersEXT glGenFramebuffers
+#define glFramebufferTexture2DEXT glFramebufferTexture2D
+#define glCheckFramebufferStatusEXT glCheckFramebufferStatus
+#define GL_MAX_TEXTURE_IMAGE_UNITS_ARB GL_MAX_TEXTURE_IMAGE_UNITS
+#define GL_UNSIGNED_INT_8_8_8_8_REV	GL_UNSIGNED_BYTE
+#define GL_COMPRESSED_RGB_S3TC_DXT1_EXT   0x83F0
+#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT  0x83F3
+#define GL_BGRA GL_BGRA_EXT
 
 #ifdef WIN32
 	#define PATH_SEPERATOR "\\"
-	#if OPENCL_BUFFERREDUCTION
-		#include <CL/opencl.h>
-	#endif
-	//#include <windows.h>
-	#if defined(TARGET_GLES)
-        // TARGET_GLES
-		#include <OpenGLES/GLES2/gl2.h>
-		#include <OpenGLES/GLES2/gl2ext.h>
-		#define glBindFramebufferEXT glBindFramebuffer
-		#define glOrtho glOrthof
-		#define GL_FRAMEBUFFER_EXT	GL_FRAMEBUFFER
-		#define glDeleteFramebuffersEXT glDeleteFramebuffers
-		#define glGenFramebuffersEXT glGenFramebuffers
-		#define glFramebufferTexture2DEXT glFramebufferTexture2D
-		#define glCheckFramebufferStatusEXT glCheckFramebufferStatus
-		#define GL_MAX_TEXTURE_IMAGE_UNITS_ARB GL_MAX_TEXTURE_IMAGE_UNITS
-		#define GL_UNSIGNED_INT_8_8_8_8_REV	GL_UNSIGNED_BYTE
-		#define GL_COMPRESSED_RGB_S3TC_DXT1_EXT   0x83F0
-		#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT  0x83F3
-        #define GL_BGRA GL_BGRA_EXT
-	#else
-		#if defined(NO_GLEE)
-			#include <GL/gl.h>
-			#include "glext.h"
-			//#include "wglext.h"
-			#include "opengl_win32.h"
-		#else
-			#include "GLee.h"
-		#endif
-	#endif
 	#include <stdio.h>
 	#include <string.h>
 	#include <stdarg.h>
@@ -80,82 +42,26 @@ You should have received a copy of the GNU Lesser General Public License along w
 	#else
 		#include <dirent.h>
 	#endif
+
 #elif defined(__APPLE__)
     #include <fcntl.h>  // Add this include for F_GLOBAL_NOCACHE
 
 	#import <TargetConditionals.h>
 	#define PATH_SEPERATOR "/"
-	#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
-		#ifdef __OBJC__
-			#import <OpenGLES/EAGL.h>
-			#import <OpenGLES/EAGLDrawable.h>
-		#endif
-
-		#include <OpenGLES/ES2/gl.h>
-		#include <OpenGLES/ES2/glext.h>
-		#define glBindFramebufferEXT glBindFramebuffer
-		#define glOrtho glOrthof
-		#define GL_FRAMEBUFFER_EXT	GL_FRAMEBUFFER
-		#define glDeleteFramebuffersEXT glDeleteFramebuffers
-		#define glGenFramebuffersEXT glGenFramebuffers
-		#define glFramebufferTexture2DEXT glFramebufferTexture2D
-		#define glCheckFramebufferStatusEXT glCheckFramebufferStatus
-		#define GL_MAX_TEXTURE_IMAGE_UNITS_ARB GL_MAX_TEXTURE_IMAGE_UNITS
-		#define GL_UNSIGNED_INT_8_8_8_8_REV	GL_UNSIGNED_BYTE
-		#define GL_COMPRESSED_RGB_S3TC_DXT1_EXT   0x83F0
-		#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT  0x83F3
-	#else
-        // TARGET_GLES
-		#include <OpenGLES/GLES2/gl2.h>
-		#include <OpenGLES/GLES2/gl2ext.h>
-		#define glBindFramebufferEXT glBindFramebuffer
-		#define glOrtho glOrthof
-		#define GL_FRAMEBUFFER_EXT	GL_FRAMEBUFFER
-		#define glDeleteFramebuffersEXT glDeleteFramebuffers
-		#define glGenFramebuffersEXT glGenFramebuffers
-		#define glFramebufferTexture2DEXT glFramebufferTexture2D
-		#define glCheckFramebufferStatusEXT glCheckFramebufferStatus
-		#define GL_MAX_TEXTURE_IMAGE_UNITS_ARB GL_MAX_TEXTURE_IMAGE_UNITS
-		#define GL_UNSIGNED_INT_8_8_8_8_REV	GL_UNSIGNED_BYTE
-		#define GL_COMPRESSED_RGB_S3TC_DXT1_EXT   0x83F0
-		#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT  0x83F3
-        #define GL_BGRA GL_BGRA_EXT
-	#endif
 	#include <dirent.h>
-	#if OPENCL_BUFFERREDUCTION
-		#include <OpenCL/opencl.h>
-	#endif
+
 #elif defined(linux)
 	#define PATH_SEPERATOR "/"
-	#if defined(TARGET_GLES)
-        // TARGET_GLES
-		#include <OpenGLES/GLES2/gl2.h>
-		#include <OpenGLES/GLES2/gl2ext.h>
-		#define glBindFramebufferEXT glBindFramebuffer
-		#define glOrtho glOrthof
-		#define GL_FRAMEBUFFER_EXT	GL_FRAMEBUFFER
-		#define glDeleteFramebuffersEXT glDeleteFramebuffers
-		#define glGenFramebuffersEXT glGenFramebuffers
-		#define glFramebufferTexture2DEXT glFramebufferTexture2D
-		#define glCheckFramebufferStatusEXT glCheckFramebufferStatus
-		#define GL_MAX_TEXTURE_IMAGE_UNITS_ARB GL_MAX_TEXTURE_IMAGE_UNITS
-		#define GL_UNSIGNED_INT_8_8_8_8_REV	GL_UNSIGNED_BYTE
-		#define GL_COMPRESSED_RGB_S3TC_DXT1_EXT   0x83F0
-		#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT  0x83F3
-        #define GL_BGRA GL_BGRA_EXT
-	#else
-        #include <GL/gl.h>
-        #include <GL/glext.h>
-        #include "opengl_linux.h"
-	#endif
-    #include <dirent.h>
+	#include <dirent.h>
 	#include <stdio.h>
 	#include <string.h>
 	#include <stdarg.h>
 	#include <stdlib.h>
 	#include <locale.h>
+
 #else
 	#error COULD_NOT_GUESS_TARGET_SYSTEM
+
 #endif
 
 #include <iostream>
@@ -267,7 +173,6 @@ struct storageInfo
 	clock_t		clockUsed;
 	uint16_t	x, y;
 	uint8_t		mip;
-//	bool		active;
 };
 
 struct vtConfig // TODO: constify?
@@ -288,7 +193,6 @@ struct vtData
 	uint16_t				mipTranslation[12];
 	uint32_t				pageTableMipOffsets[12];
 	GLuint					fbo, fboColorTexture, fboDepthTexture, physicalTexture, pageTableTexture, mipcalcTexture, pboReadback, pboPagetable, pboPhystex;
-
 
 	bool					mipLevelTouched[12];
 	uint16_t				mipLevelMinrow[12];
@@ -324,19 +228,6 @@ struct vtData
 	map<uint32_t, uint32_t>	compressedPagesSizes;
 	std::condition_variable	compressedPagesAvailableCondition;
 #endif
-
-#if OPENCL_BUFFERREDUCTION
-	cl_context				cl_shared_context;
-	cl_device_id			cl_device;
-	cl_command_queue		cl_queue;
-	cl_program				program_bufferreduction;
-    cl_kernel				kernel_buffer_to_quadtree, kernel_quadtree_to_list, kernel_quadtree_clear;
-    cl_mem					mem_quadtree, mem_offsets, mem_widths, mem_shared_texture_buffer, mem_list;
-	size_t					global_work_size_k1[2], local_work_size_k1[2];
-	size_t					global_work_size_k2, local_work_size_k2;
-	uint32_t				*list_buffer;
-	GLuint					requestTexture;
-#endif
 };
 
 void vtLoadNeededPages();
@@ -354,10 +245,6 @@ void * vtcRetrieveCachedPageLOCK(uint32_t pageInfo);
 void vtcReduceCacheIfNecessaryLOCK(clock_t currentTime);
 void _vtcRemoveCachedPage(uint32_t pageInfo);
 
-void vtPrepareOpenCL();
-void vtReshapeOpenCL(const uint16_t _w, const uint16_t _h);
-
-
 void vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location);
 void vtUnmapPageCompleteley(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location);
 
@@ -367,7 +254,6 @@ void *		vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_
 uint32_t *	vtuDownsampleImageRGBA(const uint32_t *tex);
 uint32_t *	vtuDownsampleImageRGB(const uint32_t *tex);
 void		vtuPerspective(double m[4][4], double fovy, double aspect,	double zNear, double zFar);
-
 
 
 void * vtuDecompressImageFile(const char *imagePath, uint32_t *pic_size);

@@ -1,20 +1,3 @@
-/*
- *  LibVT_Readback.cpp
- *
- *
- *  Created by Julian Mayer on 05.03.10.
- *  Copyright 2009 A. Julian Mayer. 
- *
- */
-
-/*
- This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3.0 of the License, or (at your option) any later version.
- 
- This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
- 
- You should have received a copy of the GNU Lesser General Public License along with this library; if not, see <http://www.gnu.org/licenses/> or write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
-
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
@@ -68,8 +51,7 @@ void vtPerformReadback()
 		if (READBACK_MODE == kBackbufferGetTexImage)
 			glCopyTexSubImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, 0, 0, vt.w, vt.h);
 
-		if (!OPENCL_BUFFERREDUCTION)
-			glGetTexImage(GL_TEXTURE_RECTANGLE_ARB, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer);
+		glGetTexImage(GL_TEXTURE_RECTANGLE_ARB, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer);
 	}
 	else if (READBACK_MODE_READ_PIXELS)
 		glReadPixels(0, 0, vt.w, vt.h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer);
@@ -128,8 +110,6 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 	const uint32_t *buffer;
 
 	vt.necessaryPageCount = 0;
-
-	assert(!OPENCL_BUFFERREDUCTION);
 
 	if (READBACK_MODE_NONE)
 		buffer = ext_buffer_BGRA;

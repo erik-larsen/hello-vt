@@ -112,7 +112,6 @@ Instead, LibVT was chosen for its C++ implementation, OpenGLES code path, and de
 - Add WebGL 1 and 2 builds via Emscripten, using the OpenGL ES 2 and 3 code paths, respectively.
 - Add OpenGLES 3 native build.
 - Minimize LibVT code to OpenGLES 2 and 3 code paths only.  So far, only the shaders have been simplified for OpenGLES 2.
-- Fix all compiler warnings across all platforms.
 - Visualize virtual and physical textures for debugging
 - Handle more image formats (currently PNG only)
 - Auto configure LibVT based on input image

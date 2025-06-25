@@ -37,7 +37,7 @@ VT_INC = -I../deps/include -I../deps/source
 
 # Compiler flags
 CLANG = clang++ 
-WARN = -Wall -Wno-unused-but-set-variable -Wno-self-assign   -Wno-parentheses-equality -Wno-deprecated-declarations -Wno-unused-local-typedef
+WARN = -Wall
 DEFS = -DTARGET_GLES $(OS_DEFS) 
 OPT_DEBUG = -O0 -g
 OPT_NDEBUG = -DNDEBUG -O3

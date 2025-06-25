@@ -4,7 +4,6 @@
  */
 
 
-
 /*!
  * @def		TEXUNIT_FOR_PAGETABLE
  * @brief	The texunit to use for the page table texture, can't be used otherwise in the client app <br>
@@ -108,7 +107,7 @@
  * @def		READBACK_MODE
  * @brief	Controls whether the prepass is rendered into a FBO or the normal backbuffer and whether readback is done using glGetTexImage() or glReadPixels() <br>
  * Note:	Affects VRAM usage / performance <br>
- * Values:	kBackbufferReadPixels (worst, required for GL_ES_VERSION_2_0), kBackbufferGetTexImage (bad), kFBOReadPixels (best), kFBOGetTexImage (good), kCustomReadback (use if you don't call vtPrepareReadback() and vtPerformReadback() but do the readback yourself and provide the buffer to vtExtractNeededPages(). e.g. when doing OSG integration; or when having the OpenCL integration on and doing a single renderpass for both rendering and tile determination)
+ * Values:	kBackbufferReadPixels (worst, required for GL_ES_VERSION_2_0), kBackbufferGetTexImage (bad), kFBOReadPixels (best), kFBOGetTexImage (good), kCustomReadback (use if you don't call vtPrepareReadback() and vtPerformReadback() but do the readback yourself and provide the buffer to vtExtractNeededPages(). e.g. when doing OSG integration)
  */
 #define READBACK_MODE				kBackbufferReadPixels
 
@@ -171,22 +170,6 @@
 #define DYNAMIC_LOD_ADJUSTMENT		0
 
 /*!
- * @def		OPENCL_BUFFERREDUCTION
- * @brief	Turn this on if you want to use the OpenCL buffer compression kernels which can 1.) provide speedups in 2 pass mode because the readback is on a few bytes instead of a large buffer 2.) enable a single pass solution <br>
- * Values:	0 - 1
- */
-#define OPENCL_BUFFERREDUCTION		0
-
-/*!
- * @def		OPENCL_REDUCTION_SHIFT
- * @brief	Tells the OpenCL reduction kernels to analyze the information buffer at a lower resolution. <br>
- * Note:	Affects performance, correctness <br>
- * Info:	Is similar to PREPASS_RESOLUTION_REDUCTION_SHIFT, which can not be used in a single pass solution. If you are using OpenCL, but a dual pass solution, use PREPASS_RESOLUTION_REDUCTION_SHIFT instead. <br>
- * Values:	0 - 4
- */
-#define OPENCL_REDUCTION_SHIFT		0
-
-/*!
  * @def		DEBUG_LOG
  * @brief	Sets the level of information about requested, loaded and unloaded pages outputted via printf() <br>
  * Info:	Should be set to 0 unless a problem is being debugged <br>
@@ -200,15 +183,7 @@
  * Note:	Affects performance <br>
  * Values:	0 - 2 (0 = no asynchronous page loading, 1 = asynchronous page loading using 1 additional thread, 2 = asynchronous page loading using 2 additional threads, one for loading and decompression respectively)
  */
-#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
-	#define ENABLE_MT				0
-#elif defined(TARGET_GLES)
-	#define ENABLE_MT				1
-#elif defined(WIN32)
-	#define ENABLE_MT				2
-#else
-	#define ENABLE_MT				2
-#endif
+#define ENABLE_MT					1
 
 /*!
  * @def		FALLBACK_ENTRIES
@@ -225,7 +200,6 @@
  * Values:	DecompressionLibPNG, DecompressionSTBIPNG, DecompressionLibJPEG, DecompressionLibJPEGTurbo, DecompressionSTBIJPEG, DecompressionMac, DecompressionDevil
  */
 #define IMAGE_DECOMPRESSION_LIBRARY	DecompressionSTBIPNG
-
 
 
 #if (FALLBACK_ENTRIES == 1) && (HIGHEST_MIP_LEVELS_TO_KEEP == 0)

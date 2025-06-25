@@ -1,21 +1,3 @@
-/*
- *  LibVT.h
- *
- *
- *  Created by Julian Mayer on 07.10.09.
- *  Copyright 2009 A. Julian Mayer. 
- *
- */
-
-/*
- This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3.0 of the License, or (at your option) any later version.
- 
- This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
- 
- You should have received a copy of the GNU Lesser General Public License along with this library; if not, see <http://www.gnu.org/licenses/> or write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
-
-
 /*!
  * @file	LibVT.h
  * @brief	The external header file for LibVT, declares public functions.
@@ -35,7 +17,7 @@ void		vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pa
 
 /*!
  * @fn vtLoadShaders(GLuint* readbackShader, GLuint* renderVTShader)
- * @brief Loads the VT shaders including the prelude.  Only works with GLSL shaders (no Cg, yet).  When used, calling vtGetShaderPrelude() is unnecessary.
+ * @brief Loads the VT shaders including the prelude.  Only works with GLSL shaders. When used, calling vtGetShaderPrelude() is unnecessary.
  * @param[in,out] readbackShader Creates the readback shader program and returns its ID.
  * @param[in,out] renderVTShader Creates the renderVT shader program and returns its ID.
 */
@@ -46,18 +28,10 @@ void        vtLoadShaders(GLuint* readbackShader, GLuint* renderVTShader);
  * @brief Prepares the OpenGL resources used by LibVT. It must be called after vtInit() and previous to all other functions.
  * @pre OpenGL must be ready/callable.
  * @post Has the following side effect: glUseProgram(0); glActiveTexture(GL_TEXTURE0);
- * @param[in] readbackShader The shader program created with glCreateProgram() from the readback.[vert/frag] shader and prepended by the shader prelude from vtGetShaderPrelude(). Can pass 0 if you bind the uniform samplers to the texunits yourself or use the Cg shaders where this isn't necessary.
- * @param[in] renderVTShader The shader program created with glCreateProgram() from the renderVT.[vert/frag] shader and prepended by the shader prelude from vtGetShaderPrelude(). Can pass 0 if you bind the uniform samplers to the texunits yourself or use the Cg shaders where this isn't necessary.
+ * @param[in] readbackShader The shader program created with glCreateProgram() from the readback.[vert/frag] shader and prepended by the shader prelude from vtGetShaderPrelude(). Can pass 0 if you bind the uniform samplers to the texunits yourself.
+ * @param[in] renderVTShader The shader program created with glCreateProgram() from the renderVT.[vert/frag] shader and prepended by the shader prelude from vtGetShaderPrelude(). Can pass 0 if you bind the uniform samplers to the texunits yourself.
  */
 void		vtPrepare(const GLuint readbackShader, const GLuint renderVTShader);
-
-/*!
- * @fn vtPrepareOpenCL(const GLuint requestTexture)
- * @brief Prepares the OpenCL resources used by LibVT. Must only be called if OPENCL_BUFFERREDUCTION is 1. It must be called after vtPrepare() and previous to all other functions.
- * @pre OpenGL and OpenCL must be ready/callable.
- * @param[in] requestTexture  If READBACK_MODE is kCustomReadback you are managing the FBO yourself (i.e. a single pass OpenCL solution) and you must pass the texture to extract from. Else you can pass 0, let LibVT manage the FBO and READBACK_MODE must be set to something else.
- */
-void		vtPrepareOpenCL(const GLuint requestTexture);
 
 /*!
  * @fn vtGetShaderPrelude()
@@ -143,20 +117,6 @@ float		vtGetBias();
 
 
 /*!
- * @fn vtPerformOpenCLBufferReduction()
- * @brief Must be called to reduce the buffer when doing OpenCL integration, before vtExtractNeededPagesOpenCL().
- */
-void		vtPerformOpenCLBufferReduction();
-
-
-/*!
- * @fn vtExtractNeededPagesOpenCL()
- * @brief Must be called to after buffer reduction when doing OpenCL integration, to extract the neccessary pages.
- */
-void		vtExtractNeededPagesOpenCL();
-
-
-/*!
  * @mainpage LibVT Index Page
  *
  * @section intro_usage LibVT Usage
@@ -180,8 +140,6 @@ void		vtExtractNeededPagesOpenCL();
  * At shutdown call  \link vtShutdown() vtShutdown() \endlink<br><br>
  * \b EXAMPLES:<br>
  * \ref SimpleExample Simple LibVT usage example<br>
- * \ref OpenCLExample LibVT usage example for a single pass solution using MRT and OpenCL buffer reduction<br>
- * \ref CGExample LibVT usage example with Cg instead of GLSL<br>
  * <br>
  *	NOTE: The "readback" shader has to be used exactly as provided and can't be modified. As seen in the sample you have to use this shader during rendering your virtual textured objects in the pre-pass.<br>
  *	NOTE: The "renderVT" shader can be modified as you wish, but you have to retain the virtual texture functions and use sampleVirtualTexture(calculateVirtualTextureCoordinates()) to sample from the virtual texture. Don't forget to prepend the prelude to the shadercode.<br>
@@ -332,270 +290,6 @@ void		vtExtractNeededPagesOpenCL();
  * 	glUseProgram(0);
  *
  * 	renderSomeOtherObjects();
- * }
- *
- * void shutdown() // called at shutdown
- * {
- * 	vtShutdown();
- * }
- * @endcode
- *
- */
-
-
-/*! \page CGExample LibVT usage example with Cg instead of GLSL
- *
- * @code
- * static CGcontext	cgContext;
- * static CGprofile	cgVertexProfile, cgFragmentProfile;
- * static CGprogram	cgReadbackVertexProgram, cgReadbackFragmentProgram, cgRenderVertexProgram, cgRenderFragmentProgram;
- * static CGparameter	cgRenderParamMipBias, cgReadbackParamMipBias, cgRenderParamModelViewMatrix, cgReadbackParamModelViewMatrix, cgReadbackParamMipcalcTexture, cgRenderParamPhysicalTexture, cgRenderParamPageTableTexture;
- *
- * void init() // called at startup
- * {
- * 	vtInit("/Path/to/the/tile/dir/", "jpg", 0, 8, 256); // jpeg tiles, no border, mipchain length 8, and 256x256 tiles
- *
- * 	string p_s = string(prelude);
- * 	
- * 	char * rb_v = loadTextFile("/Users/julian/Documents/Development/VirtualTexturing/LibVT/readback_vert.cg");
- * 	char * rb_f = loadTextFile("/Users/julian/Documents/Development/VirtualTexturing/LibVT/readback_frag.cg");
- * 	char * rVT_v = loadTextFile("/Users/julian/Documents/Development/VirtualTexturing/LibVT/renderVT_vert.cg");
- * 	char * rVT_f = loadTextFile("/Users/julian/Documents/Development/VirtualTexturing/LibVT/renderVT_frag.cg");
- * 	
- * 	string rb_v_s = p_s + string(rb_v);
- * 	string rb_f_s = p_s + string(rb_f);
- * 	string rVT_v_s = p_s + string(rVT_v);
- * 	string rVT_f_s = p_s + string(rVT_f);
- * 			
- * 	
- * 	vtPrepare(0, 0); // pass 0 because we have no opengl shader objects and we don't need to set the sampler uniforms for the Cg shaders anyway this is done with the prelude
- * 	
- * 	
- * 	cgContext = cgCreateContext();
- * 	cgGLSetDebugMode(CG_FALSE);
- * 	cgSetParameterSettingMode(cgContext, CG_DEFERRED_PARAMETER_SETTING);
- * 	cgGLSetManageTextureParameters(cgContext, false);
- * 	cgVertexProfile = cgGLGetLatestProfile(CG_GL_VERTEX);
- * 	cgGLSetOptimalOptions(cgVertexProfile);
- * 	cgFragmentProfile = cgGLGetLatestProfile(CG_GL_FRAGMENT);
- * 	cgGLSetOptimalOptions(cgFragmentProfile);
- * 	
- * 	
- * 	// readback shader
- * 	cgReadbackVertexProgram = cgCreateProgram(cgContext, CG_SOURCE, rb_v_s.c_str(), cgVertexProfile, "readback_vert", NULL);             
- * 	cgGLLoadProgram(cgReadbackVertexProgram);
- * 	
- * 	cgReadbackParamModelViewMatrix = cgGetNamedParameter(cgReadbackVertexProgram, "ModelViewMatrix");
- * 		
- * 	
- * 	cgReadbackFragmentProgram = cgCreateProgram(cgContext, CG_SOURCE, rb_f_s.c_str(), cgFragmentProfile, "readback_frag", NULL);              
- * 	cgGLLoadProgram(cgReadbackFragmentProgram);
- * 	
- * 	cgReadbackParamMipcalcTexture = cgGetNamedParameter(cgReadbackFragmentProgram, "mipcalcTexture");
- * 	cgGLSetTextureParameter(cgReadbackParamMipcalcTexture, vt.mipcalcTexture);
- * 	cgGLEnableTextureParameter(cgReadbackParamMipcalcTexture);
- * 	
- * 	cgReadbackParamMipBias = cgGetNamedParameter(cgReadbackFragmentProgram, "mip_bias");
- * 	
- * 	
- * 	
- * 	// renderVT shader
- * 	cgRenderVertexProgram = cgCreateProgram(cgContext, CG_SOURCE, rVT_v_s.c_str(), cgVertexProfile, "rendervt_vert", NULL);             
- * 	cgGLLoadProgram(cgRenderVertexProgram);
- * 	
- * 	cgRenderParamModelViewMatrix = cgGetNamedParameter(cgRenderVertexProgram, "ModelViewMatrix");
- * 	
- * 	
- * 	cgRenderFragmentProgram = cgCreateProgram(cgContext, CG_SOURCE, rVT_f_s.c_str(), cgFragmentProfile, "rendervt_frag", NULL);              
- * 	cgGLLoadProgram(cgRenderFragmentProgram);
- * 	
- * 	cgRenderParamPhysicalTexture = cgGetNamedParameter(cgRenderFragmentProgram, "physicalTexture");
- * 	cgGLSetTextureParameter(cgRenderParamPhysicalTexture, vt.physicalTexture);
- * 	cgGLEnableTextureParameter(cgRenderParamPhysicalTexture);
- * 	
- * 	cgRenderParamPageTableTexture = cgGetNamedParameter(cgRenderFragmentProgram, "pageTableTexture");
- * 	cgGLSetTextureParameter(cgRenderParamPageTableTexture, vt.pageTableTexture);
- * 	cgGLEnableTextureParameter(cgRenderParamPageTableTexture);
- * 	
- * 	cgRenderParamMipBias = cgGetNamedParameter(cgRenderFragmentProgram, "mip_bias");
- * 	
- * 	
- * 	free(prelude);
- * 	free(rb_v);
- * 	free(rb_f);
- * 	free(rVT_v);
- * 	free(rVT_f);
- *
- * 	renderViewHasBeenResizedOrFovChanged(640, 480, 90.0);
- * }
- *
- * void renderViewHasBeenResizedOrFovChanged(int newW, int newH, float newFov) // called at start and when w/h/fov change
- * {
- * 	float nearPlane = 1.0f, farPlane = 7000.0f;
- *
- * 	vtReshape(newW, newH, newFov, nearPlane, farPlane);
- * }
- *
- * void render() // called every frame
- * {
- * 	cgGLEnableProfile(cgVertexProfile);	
- * 	cgGLEnableProfile(cgFragmentProfile);	
- * 	
- * 		
- * 	vtPrepareReadback();
- * 	
- * 	cgGLBindProgram(cgReadbackVertexProgram);
- * 	cgGLBindProgram(cgReadbackFragmentProgram);
- * 	
- * 	
- * 	cgGLSetStateMatrixParameter(cgReadbackParamModelViewMatrix, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
- * 	cgSetParameter1f(cgReadbackParamMipBias, vtGetBias());
- * 	cgGLEnableTextureParameter(cgReadbackParamMipcalcTexture);  // dont need Cg messing with texture units pls!
- * 	
- * 	
- * 	 renderVirtualTexturedObjects();
- * 	
- * 	vtPerformReadback();
- *
- *
- *  // IN PBO MODE: you can burn a lot of CPU cycles here because the GPU is busy transfering the readback buffer back,
- *  //              and if you call vtExtractNeededPages() too "early" it will start by blocking until the transfer is done
- *
- * 	vtExtractNeededPages(NULL);  // turn on PBO readback and move this to the very beginning of the frame to delay the readback until the next frame
- * 	vtMapNewPages();
- * 	
- * 	
- * 	
- * 	cgGLBindProgram(cgRenderVertexProgram);
- * 	cgGLBindProgram(cgRenderFragmentProgram);
- * 	
- * 	
- * 	
- * 	cgGLSetStateMatrixParameter(cgRenderParamModelViewMatrix, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
- * 	cgSetParameter1f(cgRenderParamMipBias, vtGetBias());
- * 	
- * 	
- * 	cgGLEnableTextureParameter(cgRenderParamPhysicalTexture);  // dont need Cg messing with texture units pls!
- * 	cgGLEnableTextureParameter(cgRenderParamPageTableTexture); // dont need Cg messing with texture units pls!
- * 	
- * 		renderVirtualTexturedObjects();
- * 	
- * 	cgGLDisableProfile(cgVertexProfile);
- * 	cgGLDisableProfile(cgFragmentProfile);
- * 	
- * 	renderSomeOtherObjects();
- *
- * }
- *
- * void shutdown() // called at shutdown
- * {
- * 	vtShutdown();
- * }
- * @endcode
- *
- */
-
-/*! \page OpenCLExample LibVT usage example for a single pass solution using MRT and OpenCL buffer reduction
- *
- * @code
- * static GLuint ct, dt, fbo, info;
- *
- * void init() // called at startup
- * {
- * 	vtInit("/Path/to/the/tile/dir/", "jpg", 0, 8, 256); // jpeg tiles, no border, mipchain length 8, and 256x256 tiles
- *
- * 	char *prelude = vtGetShaderPrelude();
- *
- * 	combined = loadShadersWithPrelude("combined", prelude); // use the combined shader for a single MRT pass
- *
- * 	free(prelude);
- *
- * 	vtPrepare(combined, combined); // opengl must be ready when you call this
- *
- *	glGenTextures(1, &info); // create a texture that the tile determination buffer will be rendered into
- *	vtPrepareOpenCL(info); // the opencl stuff needs to know this texture. we could pass 0 in a dual pass OpenCL solution where the FBO would still be managed by LibVT
- * 
- * 	renderViewHasBeenResizedOrFovChanged(640, 480, 90.0);
- * }
- *
- * void renderViewHasBeenResizedOrFovChanged(int newW, int newH, float newFov) // called at start and when w/h/fov change
- * {
- * 	float nearPlane = 1.0f, farPlane = 7000.0f;
- *
- *	glEnable(GL_TEXTURE_RECTANGLE_ARB);
- * 	
- * 	if (!ct) glGenTextures(1, &ct);  // create FBO to render into 
- * 	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, ct);
- * 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
- * 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
- * 	glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, newW, newH, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
- * 	
- * 	assert(info); // we already created this and passed it to LibVT
- * 	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, info);
- * 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
- * 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
- * 	glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, newW, newH, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
- * 	
- * 	if (!dt) glGenTextures(1, &dt);
- * 	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, dt);
- * 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
- * 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
- * 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_DEPTH_TEXTURE_MODE, GL_LUMINANCE );
- * 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_COMPARE_MODE, GL_NONE );
- * 	glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_DEPTH_COMPONENT24, newW, newH, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
- * 	
- * 	if (!fbo) glGenFramebuffersEXT(1, &fbo);
- * 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo);
- * 	
- * 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_ARB, ct, 0);
- * 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_RECTANGLE_ARB, info, 0);
- * 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_RECTANGLE_ARB, dt, 0);
- * 	
- * 	if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
- * 		vt_fatal("Error: couldn't setup FBO %04x\n", (unsigned int)glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT));
- * 	
- * 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
- * 	
- * 	glDisable(GL_TEXTURE_RECTANGLE_ARB);
- * 	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
- * 	
- * 	vtReshape(newW, newH, newFov, nearPlane, farPlane);
- * }
- *
- * void render() // called every frame
- * {
- * 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo); // setup FBO to render into
- * 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
- * 	
- * 		GLenum mrt[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT}; // yes we gonna do MRT, wohooo!
- * 		glDrawBuffers(2, mrt);
- * 	
- * 		vtMapNewPages();
- * 	
- * 	
- * 		glUseProgram(combined); // need to use the proper shader
- *			glUniform1f(glGetUniformLocation(combined, "mip_bias"), vtGetBias());
- *
- * 			renderVirtualTexturedObjects();
- *
- * 		glUseProgram(0);
- * 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
- * 	
- * 		vtPerformOpenCLBufferReduction(); // run the OpenCL kernel on the info texture
- * 		vtExtractNeededPagesOpenCL();  // finish the kernel, read back the results and extract the needed pages from it, pass to to the loading threead
- * 	
- * 	
- * 		glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, fbo); // blit from FBO to screen
- * 		glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
- * 		glBlitFramebufferEXT(0, 0, vt.real_w, vt.real_h,
- * 	                       0, 0, vt.real_w, vt.real_h,
- * 	                       GL_COLOR_BUFFER_BIT,
- * 	                       GL_NEAREST);
- * 		glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, 0);
- * 		glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
- * 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
- *
- *		renderSomeOtherObjects();
  * }
  *
  * void shutdown() // called at shutdown
