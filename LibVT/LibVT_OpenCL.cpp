@@ -403,9 +403,9 @@ void vtExtractNeededPagesOpenCL()
 					const uint32_t pageInfo = MAKE_PAGE_INFO(m, x, y);
 
 					tmpPages.push(pageInfo);
-#if DEBUG_LOG > 0
-					printf("Requesting page: Mip:%u %u/%u\n", m, x, y);
-#endif
+					#if DEBUG_LOG > 0
+						printf("Thread %llu: Requesting page: Mip:%u %u/%u\n", THREAD_ID, m, x, y);
+					#endif
 
 					// we just want to set the alpha channel, luckly this byte is right there on little endian
 					// setting just the lowest byte matters for the fallback-entry-mode, else a non-mapped page is empty anyway
@@ -462,11 +462,11 @@ void vtExtractNeededPagesOpenCL()
 
 			vt.newPages.push(pageInfo);cachedPages.pop();
 
-#if DEBUG_LOG > 0
-			const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
-			const uint8_t mip = EXTRACT_MIP(pageInfo);
-			printf("Loading page from RAM-cache: Mip:%u %u/%u\n", mip, x_coord, y_coord);
-#endif
+			#if DEBUG_LOG > 0
+				const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
+				const uint8_t mip = EXTRACT_MIP(pageInfo);
+				printf("Thread %llu: Loading page from RAM-cache: Mip:%u %u/%u\n", THREAD_ID, mip, x_coord, y_coord);
+			#endif
 		}
 	}	// unlock
 

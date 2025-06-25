@@ -150,9 +150,10 @@ void vtMapNewPages()
 				if (!foundFree)
 				{
 					// unmap page
-#if DEBUG_LOG > 0
-					printf("Unloading page from VRAM: Mip:%u %u/%u from %u/%u lastUsed: %llu\n", vt.textureStorageInfo[x][y].mip, vt.textureStorageInfo[x][y].x, vt.textureStorageInfo[x][y].y, x, y, (long long unsigned int)lowestClock);
-#endif
+					#if DEBUG_LOG > 0
+						printf("Thread %llu: Unloading page from VRAM: Mip:%u %u/%u from %u/%u lastUsed: %llu\n", 
+							THREAD_ID, vt.textureStorageInfo[x][y].mip, vt.textureStorageInfo[x][y].x, vt.textureStorageInfo[x][y].y, x, y, (long long unsigned int)lowestClock);
+					#endif
 
 					vtUnmapPage(vt.textureStorageInfo[x][y].mip, vt.textureStorageInfo[x][y].x, vt.textureStorageInfo[x][y].y, x, y); // dont need complete version cause we map a new page at the same location
 				}
@@ -200,20 +201,20 @@ void vtMapNewPages()
 				else
 					glTexSubImage2D(GL_TEXTURE_2D, 0, x * c.pageDimension, y * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDataFormat, c.pageDataType, image_data);
 
-#if MIPPED_PHYSTEX
-				uint32_t *mippedData;
+				#if MIPPED_PHYSTEX
+					uint32_t *mippedData;
 
-				if (IMAGE_DECOMPRESSION_LIBRARY == DecompressionMac) // TODO: assert away other option
-					mippedData = vtuDownsampleImageRGBA((const uint32_t *)image_data);
-				else
-					mippedData = vtuDownsampleImageRGB((const uint32_t *)image_data);
+					if (IMAGE_DECOMPRESSION_LIBRARY == DecompressionMac) // TODO: assert away other option
+						mippedData = vtuDownsampleImageRGBA((const uint32_t *)image_data);
+					else
+						mippedData = vtuDownsampleImageRGB((const uint32_t *)image_data);
 
-				glTexSubImage2D(GL_TEXTURE_2D, 1, x * (c.pageDimension / 2), y * (c.pageDimension / 2), (c.pageDimension / 2), (c.pageDimension / 2), c.pageDataFormat, c.pageDataType, mippedData);
-				free(mippedData);
-#endif
-#if DEBUG_LOG > 0
-				printf("Loading page to VRAM: Mip:%u %u/%u to %u/%u\n", mip, x_coord, y_coord, x, y);
-#endif
+					glTexSubImage2D(GL_TEXTURE_2D, 1, x * (c.pageDimension / 2), y * (c.pageDimension / 2), (c.pageDimension / 2), (c.pageDimension / 2), c.pageDataFormat, c.pageDataType, mippedData);
+					free(mippedData);
+				#endif
+				#if DEBUG_LOG > 0
+					printf("Thread %llu: Loading page to VRAM: Mip:%u %u/%u to %u/%u\n", THREAD_ID, mip, x_coord, y_coord, x, y);
+				#endif
 #endif
 			}
 			else

@@ -203,7 +203,7 @@
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
 	#define ENABLE_MT				0
 #elif defined(TARGET_GLES)
-	#define ENABLE_MT				0
+	#define ENABLE_MT				1
 #elif defined(WIN32)
 	#define ENABLE_MT				2
 #else

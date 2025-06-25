@@ -189,9 +189,9 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 					tmpPages1[pageInfo] = 1;
 ///*1*/				bla[pageInfo] = 1;
 
-#if DEBUG_LOG > 0
-					printf("Requesting page: Mip:%u %u/%u\n", mip, x_coord, y_coord);
-#endif
+					#if DEBUG_LOG > 0
+						printf("Thread %llu: Requesting page: Mip:%u %u/%u\n", THREAD_ID, mip, x_coord, y_coord);
+					#endif
 
 					// we just want to set the alpha channel, luckly this byte is right there on little endian
 					// setting just the lowest byte matters for the fallback-entry-mode, else a non-mapped page is empty anyway
@@ -278,11 +278,11 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 
 				vt.neededPages.push_back(pageInfo);nonCachedPages.pop();
 
-#if DEBUG_LOG > 0
-				const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
-				const uint8_t mip = EXTRACT_MIP(pageInfo);
-				printf("Requesting page for loading from disk: Mip:%u %u/%u (%i)\n", mip, x_coord, y_coord, pageInfo);
-#endif
+				#if DEBUG_LOG > 0
+					const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
+					const uint8_t mip = EXTRACT_MIP(pageInfo);
+					printf("Thread %llu: Requesting page for loading from disk: Mip:%u %u/%u (%i)\n", THREAD_ID, mip, x_coord, y_coord, pageInfo);
+				#endif
 			}
 
 #if ENABLE_MT
@@ -301,11 +301,11 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 
 			vt.newPages.push(pageInfo);cachedPages.pop();
 
-#if DEBUG_LOG > 0
-			const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
-			const uint8_t mip = EXTRACT_MIP(pageInfo);
-			printf("Loading page from RAM-cache: Mip:%u %u/%u (%i)\n", mip, x_coord, y_coord, pageInfo);
-#endif
+			#if DEBUG_LOG > 0
+				const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
+				const uint8_t mip = EXTRACT_MIP(pageInfo);
+				printf("Thread %llu: Loading page from RAM-cache: Mip:%u %u/%u (%i)\n", THREAD_ID, mip, x_coord, y_coord, pageInfo);
+			#endif
 		}
 	}	// unlock
 }

@@ -483,7 +483,7 @@ void * vtuDecompressImageBuffer(const void *file_data, uint32_t file_size, uint3
 void * vtuDecompressImageFile(const char *imagePath, uint32_t *pic_size)
 {
 	int width, height, bitdepth;
-    printf("Loading PNG file: %s\n", imagePath);
+    printf("Thread %llu: Loading PNG file: %s\n", THREAD_ID, imagePath);
 	void * data = stbi_load(imagePath, &width, &height, &bitdepth, STBI_rgb);
 
 	assert(data);

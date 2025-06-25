@@ -161,22 +161,25 @@ You should have received a copy of the GNU Lesser General Public License along w
 #include <iostream>
 #include <queue>
 #include <map>
-
-
 #include <vector>
 #include <string>
 
 #undef TIME_UTC
-// #include <boost/thread/thread.hpp>
-// #include <boost/thread/condition.hpp>
-// #include <boost/cstdint.hpp>
+
+#include <thread>
+#include <functional>
+#define THREAD_ID static_cast<unsigned long long>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
+
+#if ENABLE_MT
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+#endif
 
 void vtShutdown();
 static inline void vt_fatal(const char *err, ...) {va_list ap; va_start (ap, err); vtShutdown(); vfprintf (stderr, err, ap); va_end (ap); exit(1); }
 
 using namespace std;
-//using namespace boost;
-
 
 enum {
 	kCustomReadback = 1,
@@ -242,7 +245,7 @@ enum {
 #endif
 
 #if ENABLE_MT
-    #define LOCK(x)					boost::mutex::scoped_lock scoped_lock(x);
+    #define LOCK(x)					std::unique_lock<std::mutex> scoped_lock(x);
 #else
     #define LOCK(x)
 #endif
@@ -305,20 +308,21 @@ struct vtData
 	map<uint32_t, clock_t>	cachedPagesAccessTimes;
 
 #if ENABLE_MT
-	boost::condition		neededPagesAvailableCondition;
-	boost::mutex			neededPagesMutex;
-	boost::mutex			newPagesMutex;
-	boost::mutex			cachedPagesMutex;
-	boost::thread			backgroundThread;
+	std::atomic<bool>		shutdownThreads{false};
+	std::condition_variable	neededPagesAvailableCondition;
+	std::mutex				neededPagesMutex;
+	std::mutex				newPagesMutex;
+	std::mutex				cachedPagesMutex;
+	std::thread				backgroundThread;
 #endif
 
 #if ENABLE_MT > 1
-	boost::thread			backgroundThread2;
-	boost::mutex			compressedMutex;
+	std::thread				backgroundThread2;
+	std::mutex				compressedMutex;
 	queue<uint32_t>			newCompressedPages;
 	map<uint32_t, void *>	compressedPages;
 	map<uint32_t, uint32_t>	compressedPagesSizes;
-	boost::condition		compressedPagesAvailableCondition;
+	std::condition_variable	compressedPagesAvailableCondition;
 #endif
 
 #if OPENCL_BUFFERREDUCTION

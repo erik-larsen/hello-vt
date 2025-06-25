@@ -122,11 +122,11 @@ char vtuFileExists(char *path)
 	if (f)
 	{
 		fclose(f);
-        printf("File exists: %s\n", path);
+        printf("Thread %llu: File exists: %s\n", THREAD_ID, path);
 		return 1;
 	}
 	else {
-        printf("File does not exist: %s\n", path);
+        printf("Thread %llu: File does not exist: %s\n", THREAD_ID, path);
 		return 0;
     }
 }
@@ -196,7 +196,7 @@ GLuint vtuCompileShaderWithPrelude(const char* prelude, const char* shaderSrc, G
     GLuint shader = glCreateShader(type);
 
     #if DEBUG_LOG > 2
-        printf("VT shader id: %d source:\n%s\n", shader, fullShaderStr);
+        printf("Thread %llu: VT shader id: %d source:\n%s\n", THREAD_ID, shader, fullShaderStr);
     #endif
 
     glShaderSource(shader, 1, &fullShaderStr, nullptr);

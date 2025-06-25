@@ -85,9 +85,9 @@ void vtcReduceCacheIfNecessaryLOCK(clock_t currentTime)
 		if (pagesToErase > (c.maxCachedPages / 10)) pagesToErase = c.maxCachedPages / 10;
 		multimap<clock_t, uint32_t> oldestPages;
 
-#if DEBUG_LOG > 0
-		printf("RAM-cache has %i too many pages - erasing the %i least recently touched pages!\n", (size - c.maxCachedPages), pagesToErase);
-#endif
+		#if DEBUG_LOG > 0
+			printf("Thread %llu: RAM-cache has %i too many pages - erasing the %i least recently touched pages!\n", THREAD_ID, (size - c.maxCachedPages), pagesToErase);
+		#endif
 
 		for (uint32_t i = 0; i < pagesToErase; i++)
 			oldestPages.insert(pair<clock_t, uint32_t>(currentTime+1+i, i));
@@ -111,9 +111,9 @@ void vtcReduceCacheIfNecessaryLOCK(clock_t currentTime)
 			uint32_t pageInfo = oldestIter->second;
 			_vtcRemoveCachedPage(pageInfo);
 
-#if DEBUG_LOG > 1
-			printf("Un-loading page from RAM-cache: Mip:%u %u/%u\n", EXTRACT_MIP(pageInfo), EXTRACT_X(pageInfo), EXTRACT_Y(pageInfo));
-#endif
+			#if DEBUG_LOG > 1
+				printf("Thread %llu: Un-loading page from RAM-cache: Mip:%u %u/%u\n", THREAD_ID, EXTRACT_MIP(pageInfo), EXTRACT_X(pageInfo), EXTRACT_Y(pageInfo));
+			#endif
 		}
 	}
 }
