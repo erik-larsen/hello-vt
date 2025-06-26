@@ -37,50 +37,9 @@ void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pag
 	// initialize and calculate configuration
 	c.tileDir = string(_tileDir);
 	c.pageCodec = string(_pageExtension);
-
-	if (c.pageCodec == "dxt1" || REALTIME_DXT_COMPRESSION)
-	{
-		if (REALTIME_DXT_COMPRESSION) assert((IMAGE_DECOMPRESSION_LIBRARY == DecompressionLibJPEGTurbo) || (IMAGE_DECOMPRESSION_LIBRARY == DecompressionMac));
-
-		c.pageDXTCompression = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
-		c.pageMemsize = (_pageDimension * _pageDimension / 2);
-
-		assert(!MIPPED_PHYSTEX) ;
-	}
-	else if (c.pageCodec == "dxt5")
-	{
-		c.pageDXTCompression = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-		c.pageMemsize = (_pageDimension * _pageDimension);
-	}
-	else
-	{
-		if (IMAGE_DECOMPRESSION_LIBRARY == DecompressionMac )			
-		{
-			c.pageDataFormat = GL_BGRA;
-			c.pageDataType = GL_UNSIGNED_INT_8_8_8_8_REV;
-#if GL_ES_VERSION_2_0
-			c.pageDataFormat = GL_RGBA;
-			c.pageDataType = GL_UNSIGNED_BYTE;
-#endif
-			c.pageMemsize = (_pageDimension * _pageDimension * 4);
-		}
-		else if (IMAGE_DECOMPRESSION_LIBRARY == DecompressionImageMagick)
-		{
-			c.pageDataFormat = GL_RGB;
-			c.pageDataType = GL_SHORT;
-			c.pageMemsize = (_pageDimension * _pageDimension * 8);
-		}
-		else
-		{
-#if !GL_ES_VERSION_2_0
-			c.pageDataFormat = (c.pageCodec == "bmp") ? GL_BGR : GL_RGB;
-#else
-			c.pageDataFormat = GL_RGB;
-#endif
-			c.pageDataType = GL_UNSIGNED_BYTE;
-			c.pageMemsize = (_pageDimension * _pageDimension * 3);
-		}
-	}
+	c.pageDataFormat = GL_RGB;
+	c.pageDataType = GL_UNSIGNED_BYTE;
+	c.pageMemsize = (_pageDimension * _pageDimension * 3);
 	c.physTexDimensionPages = PHYS_TEX_DIMENSION / _pageDimension;
 	c.maxCachedPages = (int)((float)MAX_RAMCACHE_MB / ((float)c.pageMemsize / (1024.0 * 1024.0)));
 	for (uint8_t i = 0; i < float(HIGHEST_MIP_LEVELS_TO_KEEP); i++)
@@ -156,9 +115,8 @@ void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pag
 		vt.backgroundThread2 = std::thread(&vtDecompressNeededPagesDecoupled);
     #endif
 
-	if (c.pageDXTCompression && (c.pageBorder % 4 != 0)) printf("Warning: PAGE_BORDER should be a multiple of 4 for DXT compression\n");
 	assert(c.physTexDimensionPages <= MAX_PHYS_TEX_DIMENSION_PAGES);
-	assert(!((MIPPED_PHYSTEX == 1) && ((USE_PBO_PHYSTEX == 1) || (c.pageDXTCompression)))); // TODO: support these combinations
+	assert(!((MIPPED_PHYSTEX == 1) && (USE_PBO_PHYSTEX == 1))); // TODO: support these combinations
 }
 
 bool vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, uint8_t *_mipChainLength, uint32_t *_pageDimension)
@@ -201,25 +159,11 @@ bool vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, u
 				{
 					uint32_t len = (uint32_t) file.length();
 					codec = file.substr(len - 4);
-					if (codec[0] == '.') codec = codec.substr(1);
-
-					if ((codec == "dxt1") || (codec == "dxt5"))
-					{
-						FILE *f = fopen(string(string(_tileDir) + string("/") + string (tilestring) + string("/") + file).c_str(), "rb");
-						unsigned long fileSize;
-						fseek(f , 0 , SEEK_END);
-						fileSize = ftell(f) - 8;
-						if (codec == "dxt1")
-							fileSize *= 2;
-
-						*_pageDimension = (uint16_t) sqrtf((float)fileSize);
-					}
-					else
-					{
-						*_pageDimension = 0;
-						void *image = vtuDecompressImageFile(string(string(_tileDir) + string("/") + string (tilestring) + string("/") + file).c_str(), _pageDimension);
-						free(image);
-					}
+					if (codec[0] == '.') 
+						codec = codec.substr(1);
+					*_pageDimension = 0;
+					void *image = vtuDecompressImageFile(string(string(_tileDir) + string("/") + string (tilestring) + string("/") + file).c_str(), _pageDimension);
+					free(image);
 					success = true;
 					break;
 				}
@@ -284,10 +228,7 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, ANISOTROPY);
 #endif
 
-	if (c.pageDXTCompression)
-		glCompressedTexImage2D(GL_TEXTURE_2D, 0, c.pageDXTCompression, PHYS_TEX_DIMENSION, PHYS_TEX_DIMENSION, 0, c.pageMemsize * c.physTexDimensionPages * c.physTexDimensionPages, NULL);
-	else
-		glTexImage2D(GL_TEXTURE_2D, 0, c.pageDataFormat == GL_RGB ? GL_RGB : GL_RGBA, PHYS_TEX_DIMENSION, PHYS_TEX_DIMENSION, 0, c.pageDataFormat, c.pageDataType, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, c.pageDataFormat == GL_RGB ? GL_RGB : GL_RGBA, PHYS_TEX_DIMENSION, PHYS_TEX_DIMENSION, 0, c.pageDataFormat, c.pageDataType, NULL);
 
 	if (MIPPED_PHYSTEX)
 	{

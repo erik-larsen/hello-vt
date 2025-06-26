@@ -8,7 +8,7 @@
  * @fn vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pageBorder, const uint8_t _mipChainLength, const uint16_t _pageDimension)
  * @brief Initializes LibVT and must be called previous to all other functions.
  * @param[in] _tileDir			The full path to the tile directory.
- * @param[in] _pageExtension	This is the extension and format of the stored page tiles, Values: "jpg", "bmp", "png", "dxt1", "dxt5"
+ * @param[in] _pageExtension	This is the extension and format of the stored page tiles, Values: "jpg" or "png"
  * @param[in] _pageBorder		This is the border each page has in pixels, Values:	0-8
  * @param[in] _mipChainLength	The length of the mipchain, determined by the virt. tex. size and the page size, Values: 2 - 11
  * @param[in] _pageDimension	This is the width/height of a single page in pixels, Values: 64, 128, 256 or 512

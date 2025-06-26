@@ -4,14 +4,13 @@
 extern vtData vt;
 extern vtConfig c;
 
-
 #if ENABLE_MT < 2
 void vtLoadNeededPages()
 {
 	char buf[255];
 
 #if ENABLE_MT
-	const int limit = 1;
+	const int limit = 1; // limit to 1 page load at a time
 	while (!vt.shutdownThreads)
 #else
 	const int limit = 10;
@@ -21,16 +20,18 @@ void vtLoadNeededPages()
 		{	// lock
 			LOCK(vt.neededPagesMutex)
 
-#if ENABLE_MT
-			// sleep as long as there are no pages to be loaded, or shutdown requested
-			vt.neededPagesAvailableCondition.wait(scoped_lock, [&]{ return !vt.neededPages.empty() || vt.shutdownThreads; });
-			if (vt.shutdownThreads)
-				break;
-#endif
-			uint8_t i = 0;	// limit to 1 pages at once
+			#if ENABLE_MT
+				// sleep as long as there are no pages to be loaded, or shutdown requested
+				vt.neededPagesAvailableCondition.wait(scoped_lock, [&]{ return !vt.neededPages.empty() || vt.shutdownThreads; });
+				if (vt.shutdownThreads)
+					break;
+			#endif
+
+			uint8_t i = 0;	
 			while(!vt.neededPages.empty() && i < limit) // TODO: all this copying could use preallocation of necessary space (not only here)
 			{
-				neededPages.push(vt.neededPages.front());vt.neededPages.pop_front();
+				neededPages.push(vt.neededPages.front());
+				vt.neededPages.pop_front();
 				i ++;
 			}
 
@@ -43,7 +44,6 @@ void vtLoadNeededPages()
 			const uint8_t mip = EXTRACT_MIP(pageInfo);
 			void *image_data;
 
-
 			// load tile from cache or harddrive
 			if (!vtcIsPageInCacheLOCK(pageInfo))
 			{
@@ -51,20 +51,10 @@ void vtLoadNeededPages()
 				snprintf(buf, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", c.tileDir.c_str(), PATH_SEPERATOR, c.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, y_coord, c.pageCodec.c_str());
 
 				#if DEBUG_LOG > 0
-					printf("Thread %llu: Loading and decompressing page from Disk: Mip:%u %u/%u\n", THREAD_ID, mip, x_coord, y_coord);
+					printf("Thread %llu: Loading and decompressing page from disk: mip:%u %u/%u\n", THREAD_ID, mip, x_coord, y_coord);
 				#endif
 
-				if (c.pageDXTCompression && !REALTIME_DXT_COMPRESSION)
-					image_data = vtuLoadFile(buf, 8, NULL);
-				else
-					image_data = vtuDecompressImageFile(buf, &c.pageDimension);
-
-				if (REALTIME_DXT_COMPRESSION)
-				{
-					void *compressed_data =	vtuCompressRGBA_DXT1(image_data);
-					free(image_data);
-					image_data = compressed_data;
-				}
+				image_data = vtuDecompressImageFile(buf, &c.pageDimension);
 
 				vtcInsertPageIntoCacheLOCK(pageInfo, image_data);
 			}
@@ -115,14 +105,15 @@ void vtLoadNeededPagesDecoupled()
 			// load tile from cache or harddrive
 			if (!vtcIsPageInCacheLOCK(pageInfo))
 			{
-				snprintf(buf, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", c.tileDir.c_str(), PATH_SEPERATOR, c.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, vt.mipTranslation[mip] - y_coord, c.pageCodec.c_str()); // convert from lower left coordinates (opengl) to top left (tile store on disk)
+				// snprintf(buf, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", c.tileDir.c_str(), PATH_SEPERATOR, c.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, vt.mipTranslation[mip] - y_coord, c.pageCodec.c_str()); // convert from lower left coordinates (opengl) to top left (tile store on disk)
+				snprintf(buf, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", c.tileDir.c_str(), PATH_SEPERATOR, c.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, y_coord, c.pageCodec.c_str());
 
 				#if DEBUG_LOG > 0
 					printf("Thread %llu: Loading page from Disk: Mip:%u %u/%u (%i)\n", THREAD_ID, mip, x_coord, y_coord, pageInfo);
 				#endif
 
 				uint32_t size = 0;
-				void *file_data = vtuLoadFile(buf, (c.pageDXTCompression && !REALTIME_DXT_COMPRESSION) ? 8 : 0, &size);
+				void *file_data = vtuLoadFile(buf, 0, &size);
 
 				{	// lock
 					LOCK(vt.compressedMutex)
@@ -173,7 +164,6 @@ void vtDecompressNeededPagesDecoupled()
 				file_data = vt.compressedPages.find(pageInfo)->second;
 				size = vt.compressedPagesSizes.find(pageInfo)->second;
 
-
 				vt.compressedPages.erase(pageInfo);
 				vt.compressedPagesSizes.erase(pageInfo);
 			}	// unlock
@@ -189,21 +179,11 @@ void vtDecompressNeededPagesDecoupled()
 				void *image_data = vtuDecompressImageBuffer(file_data, size, &c.pageDimension);
 
 				free(file_data);
-
-				if (REALTIME_DXT_COMPRESSION)
-				{
-					void *compressed_data =	vtuCompressRGBA_DXT1(image_data);
-					free(image_data);
-					image_data = compressed_data;
-				}
-
 				vtcInsertPageIntoCacheLOCK(pageInfo, image_data);
 
 				{	// lock
 					LOCK(vt.newPagesMutex)
-
 					vt.newPages.push(pageInfo);
-
 				}	// unlock
 			}
 		}
@@ -226,23 +206,14 @@ void vtCachePages(queue<uint32_t> pagesToCache)
 		// load tile from cache or harddrive
 		if (!vtcIsPageInCacheLOCK(pageInfo))
 		{
-			snprintf(buf, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", c.tileDir.c_str(), PATH_SEPERATOR, c.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, vt.mipTranslation[mip] - y_coord, c.pageCodec.c_str()); // convert from lower left coordinates (opengl) to top left (tile store on disk)
+			snprintf(buf, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", 
+				c.tileDir.c_str(), PATH_SEPERATOR, c.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, vt.mipTranslation[mip] - y_coord, c.pageCodec.c_str()); // convert from lower left coordinates (opengl) to top left (tile store on disk)
 
 			#if DEBUG_LOG > 0
 				printf("Thread %llu: Caching page from disk: Mip:%u %u/%u\n", THREAD_ID, mip, x_coord, y_coord);
 			#endif
 
-			if (c.pageDXTCompression && !REALTIME_DXT_COMPRESSION)
-				image_data = vtuLoadFile(buf, 8, NULL);
-			else
-				image_data = vtuDecompressImageFile(buf, &c.pageDimension);
-
-			if (REALTIME_DXT_COMPRESSION)
-			{
-				void *compressed_data =	vtuCompressRGBA_DXT1(image_data);
-				free(image_data);
-				image_data = compressed_data;
-			}
+			image_data = vtuDecompressImageFile(buf, &c.pageDimension);
 
 			vtcInsertPageIntoCacheLOCK(pageInfo, image_data);
 		}

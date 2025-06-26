@@ -108,13 +108,28 @@ Of note, [OpenSeaDragon](https://openseadragon.github.io/) is an excellent imple
 Instead, LibVT was chosen for its C++ implementation, OpenGLES code path, and decent documentation.  Fixes were made to LibVT to get it running again 15 years later, and to remove code not on the OpenGLES 2 code path.  Further, an SDL-based sample app with a pre-processed test image is provided to demonstrate LibVT. (Note: At one time LibVT provided its own [pre-built sample](https://bintray.com/artifact/download/corecode/LibVT/libvt_demo_binaries_win32_mac.zip), but the link is dead and not saved on archive.org).
 
 
+## Work in progress
+
+### libvt-webgl1
+
+* Code minimized to OpenGLES2 / WebGL1
+* Sync framebuffer readback
+* Emscripten build
+* Decompress png/jpg files only, using stb
+* No GPU texture compression
+* Visualize virtual and physical textures for debugging
+* Auto configure LibVT based on input image
+
+
 ## Future work
-- Add WebGL 1 and 2 builds via Emscripten, using the OpenGL ES 2 and 3 code paths, respectively.
-- Add OpenGLES 3 native build.
-- Minimize LibVT code to OpenGLES 2 and 3 code paths only.  So far, only the shaders have been simplified for OpenGLES 2.
-- Visualize virtual and physical textures for debugging
-- Handle more image formats (currently PNG only)
-- Auto configure LibVT based on input image
+
+### libvt-webgl2
+
+* Add OpenGLES3 / WebGL2 code path
+* Async + double-buffered PBO readback
+* Emscripten build
+* Faster decompression using libjpeg-turbo and libpng
+* ETC2/EAC GPU texture compression
 
 
 ## Authors

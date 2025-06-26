@@ -161,19 +161,10 @@ void vtMapNewPages()
 
 				newPageCount ++;
 #else
-				if (c.pageDXTCompression)
-					glCompressedTexSubImage2D(GL_TEXTURE_2D, 0, x * c.pageDimension, y * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDXTCompression, c.pageMemsize, image_data);
-				else
-					glTexSubImage2D(GL_TEXTURE_2D, 0, x * c.pageDimension, y * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDataFormat, c.pageDataType, image_data);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, x * c.pageDimension, y * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDataFormat, c.pageDataType, image_data);
 
 				#if MIPPED_PHYSTEX
-					uint32_t *mippedData;
-
-					if (IMAGE_DECOMPRESSION_LIBRARY == DecompressionMac) // TODO: assert away other option
-						mippedData = vtuDownsampleImageRGBA((const uint32_t *)image_data);
-					else
-						mippedData = vtuDownsampleImageRGB((const uint32_t *)image_data);
-
+					uint32_t *mippedData = vtuDownsampleImageRGB((const uint32_t *)image_data);
 					glTexSubImage2D(GL_TEXTURE_2D, 1, x * (c.pageDimension / 2), y * (c.pageDimension / 2), (c.pageDimension / 2), (c.pageDimension / 2), c.pageDataFormat, c.pageDataType, mippedData);
 					free(mippedData);
 				#endif
@@ -200,10 +191,7 @@ void vtMapNewPages()
 
 		for (uint8_t i = 0; i < newPageCount; i++)
 		{
-			if (c.pageDXTCompression)
-				glCompressedTexSubImage2D(GL_TEXTURE_2D, 0, xCoordinatesForPageMapping[i] * c.pageDimension, yCoordinatesForPageMapping[i] * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDXTCompression, c.pageMemsize, (uint8_t *) NULL + (i * c.pageMemsize));
-			else
-				glTexSubImage2D(GL_TEXTURE_2D, 0, xCoordinatesForPageMapping[i] * c.pageDimension, yCoordinatesForPageMapping[i] * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDataFormat, c.pageDataType,  (uint8_t *) NULL + (i * c.pageMemsize));
+			glTexSubImage2D(GL_TEXTURE_2D, 0, xCoordinatesForPageMapping[i] * c.pageDimension, yCoordinatesForPageMapping[i] * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDataFormat, c.pageDataType,  (uint8_t *) NULL + (i * c.pageMemsize));
 		}
 
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);

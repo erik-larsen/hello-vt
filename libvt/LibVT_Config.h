@@ -113,7 +113,7 @@
 
 /*!
  * @def		USE_PBO_READBACK
- * @brief	Perform asynchronous prepass readback with the help of a Pixel Buffer Object. Currently this means that vtPerformReadback() will return immeadetly because it only triggers the asynchronous readback. The buffer will then be mapped at the beginning of vtExtractNeededPages(). Thereforce you can do CPU work between vtPerformReadback() and vtExtractNeededPages() that would otherwise be wasted waiting for the GPU result. Must be on if you want to delay the readback until the next frame. <br>
+ * @brief	Perform asynchronous prepass readback with the help of a Pixel Buffer Object. Currently this means that vtPerformReadback() will return immediately because it only triggers the asynchronous readback. The buffer will then be mapped at the beginning of vtExtractNeededPages(). Therefore you can do CPU work between vtPerformReadback() and vtExtractNeededPages() that would otherwise be wasted waiting for the GPU result. Must be on if you want to delay the readback until the next frame. <br>
  * Note:	Affects VRAM usage / performance <br>
  * Values:	0 - 1
  */
@@ -152,15 +152,6 @@
 #define USE_MIPCALC_TEXTURE			1
 
 /*!
- * @def		REALTIME_DXT_COMPRESSION
- * @brief	Compress tiles to DXT1 before sending them to the GPU. <br>
- * Note:	Affects performance, correctness and VRAM usage <br>
- * Values:	0 - 1 <br>
- * Info:	This currently only works with DecompressionLibJPEGTurbo or DecompressionMac. Reduces GPU memory requirements to just 1/8.
- */
-#define REALTIME_DXT_COMPRESSION	0
-
-/*!
  * @def		DYNAMIC_LOD_ADJUSTMENT
  * @brief	Turn this on to make LibVT dynamically adjust the mipmap lod bias to make the required tiles fit the physical page.  <br>
  * Note:	Affects quality <br>
@@ -183,7 +174,7 @@
  * Note:	Affects performance <br>
  * Values:	0 - 2 (0 = no asynchronous page loading, 1 = asynchronous page loading using 1 additional thread, 2 = asynchronous page loading using 2 additional threads, one for loading and decompression respectively)
  */
-#define ENABLE_MT					1
+#define ENABLE_MT					2
 
 /*!
  * @def		FALLBACK_ENTRIES
@@ -192,15 +183,6 @@
  * Values:	0 - 1
  */
 #define FALLBACK_ENTRIES			1
-
-/*!
- * @def		IMAGE_DECOMPRESSION_LIBRARY
- * @brief	Sets the image decompression library that will be used <br>
- * Note:	When setting to a library which doesn't handle all formats, this restricts the possible image formats at runtime <br>
- * Values:	DecompressionLibPNG, DecompressionSTBIPNG, DecompressionLibJPEG, DecompressionLibJPEGTurbo, DecompressionSTBIJPEG, DecompressionMac, DecompressionDevil
- */
-#define IMAGE_DECOMPRESSION_LIBRARY	DecompressionSTBIPNG
-
 
 #if (FALLBACK_ENTRIES == 1) && (HIGHEST_MIP_LEVELS_TO_KEEP == 0)
 	#error FALLBACK_ENTRIES requires HIGHEST_MIP_LEVELS_TO_KEEP >= 1

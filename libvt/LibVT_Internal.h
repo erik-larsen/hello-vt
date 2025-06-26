@@ -17,31 +17,14 @@
 #define glCheckFramebufferStatusEXT glCheckFramebufferStatus
 #define GL_MAX_TEXTURE_IMAGE_UNITS_ARB GL_MAX_TEXTURE_IMAGE_UNITS
 #define GL_UNSIGNED_INT_8_8_8_8_REV	GL_UNSIGNED_BYTE
-#define GL_COMPRESSED_RGB_S3TC_DXT1_EXT   0x83F0
-#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT  0x83F3
 #define GL_BGRA GL_BGRA_EXT
 
 #ifdef WIN32
 	#define PATH_SEPERATOR "\\"
+	#include <dirent.h>
 	#include <stdio.h>
 	#include <string.h>
 	#include <stdarg.h>
-
-	#if defined(_MSC_VER)
-		#ifndef snprintf
-			#define snprintf _snprintf
-		#endif
-		#ifndef log2f
-			inline float log2f(double x)
-			{
-				 static const double xxx = 1.0/log(2.0);
-				 return (float)(log(x)*xxx);
-			}
-		#endif
-		#include "dirent_win32.h"
-	#else
-		#include <dirent.h>
-	#endif
 
 #elif defined(__APPLE__)
     #include <fcntl.h>  // Add this include for F_GLOBAL_NOCACHE
@@ -185,7 +168,7 @@ struct vtConfig // TODO: constify?
 
     // derived values:
     uint32_t		pageMemsize, maxCachedPages, physTexDimensionPages, virtTexDimensionPages, residentPages;
-    GLenum			pageDataFormat, pageDataType, pageDXTCompression;
+    GLenum			pageDataFormat, pageDataType;
 };
 
 struct vtData
@@ -235,7 +218,6 @@ void vtLoadNeededPagesDecoupled();
 void vtDecompressNeededPagesDecoupled();
 void vtCachePages(queue<uint32_t> pagesToCache);
 
-
 void vtcRemoveCachedPageLOCK(uint32_t pageInfo);
 void vtcTouchCachedPage(uint32_t pageInfo);
 void vtcSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32_t> *cached, queue<uint32_t> *nonCached);
@@ -248,18 +230,14 @@ void _vtcRemoveCachedPage(uint32_t pageInfo);
 void vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location);
 void vtUnmapPageCompleteley(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location);
 
-
 char		vtuFileExists(char *path);
 void *		vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_size);
 uint32_t *	vtuDownsampleImageRGBA(const uint32_t *tex);
 uint32_t *	vtuDownsampleImageRGB(const uint32_t *tex);
 void		vtuPerspective(double m[4][4], double fovy, double aspect,	double zNear, double zFar);
 
-
 void * vtuDecompressImageFile(const char *imagePath, uint32_t *pic_size);
 void * vtuDecompressImageBuffer(const void *file_data, uint32_t file_size, uint32_t *pic_size);
-void * vtuCompressRGBA_DXT1(void *rgba);
-void * vtuCompressRGBA_DXT5(void *rgba);
 
 #include "LibVT_Shaders.h"
 
