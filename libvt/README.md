@@ -19,7 +19,7 @@ Define `ENABLE_MT` as follows to control threading:
 ### Benefits
 
 * This allows expensive file I/O and decompression to happen in the background thread, without freezing the main rendering loop where the user demands smooth interaction.  This takes advantage of multiple CPU cores to do work in parallel.
-* This also allows utilizing system memory as an intermediate fast and spacious cache between disk and GPU, with system memory being far faster than disk and likely more capicious than GPU cache.
+* This also allows utilizing system memory as an intermediate fast and spacious cache between disk and GPU, with system memory being far faster than disk and likely more capacious than GPU memory.
 
 
 ## **LibVT Threading details**
