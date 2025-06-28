@@ -4,6 +4,8 @@
 
 A minimal yet complete implementation of virtual texturing that is cross-platform and provides a reference sample app.
 
+Virtual texturing is a technique for viewing textures which are larger than can fit in memory.  These mega textures are mipmapped and each mipmap level is tiled.  Each tile is stored on disk (or web server) as a separate image file, and called hereafter a page.  Pages are then loaded on-demand based on the current view.  Rendering tiles is done in the main thread, with loading and decompressing of pages done asynchronously on one or two background threads, leading to smooth panning and zooming of these big textures.
+
 This work is an OpenGLES-specific and modernized fork of [LibVT](https://github.com/core-code/LibVT?tab=readme-ov-file#readme) plus a cross-platform sample app.  Special thanks to *Julian Mayer* for his original implementation and thorough documentation.
 
 Goals:
@@ -14,7 +16,6 @@ Goals:
 
 - Supply a reference sample that demonstrates the LibVT calls necessary to load and render a virtual texture, while utilizing SDL for cross-platform windowing and event handling.
 
-NOTE: This code is work in progress.  More code minimization needs to be done and an Emscripten build is pending.  But at least an interactive demo is now available on Mac, Windows, and Linux.
 
 
 ## Sample
