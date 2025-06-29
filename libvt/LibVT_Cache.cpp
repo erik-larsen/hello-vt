@@ -6,100 +6,100 @@ extern vtConfig c;
 
 void vtcRemoveCachedPageLOCK(uint32_t pageInfo)
 {
-	LOCK(vt.cachedPagesMutex)
-	return _vtcRemoveCachedPage(pageInfo);
+    LOCK(vt.cachedPagesMutex)
+    return _vtcRemoveCachedPage(pageInfo);
 }
 
 void vtcTouchCachedPage(uint32_t pageInfo)
 {
-	vt.cachedPagesAccessTimes[pageInfo] = vt.thisFrameClock;
+    vt.cachedPagesAccessTimes[pageInfo] = vt.thisFrameClock;
 }
 
 void vtcSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32_t> *cached, queue<uint32_t> *nonCached)
 {
-	LOCK(vt.cachedPagesMutex)
+    LOCK(vt.cachedPagesMutex)
 
-	while(!s->empty())
-	{
-		uint32_t page = s->front();
+    while(!s->empty())
+    {
+        uint32_t page = s->front();
 
-		if (vt.cachedPages.count(page))
-			cached->push(page);
-		else
-			nonCached->push(page);
+        if (vt.cachedPages.count(page))
+            cached->push(page);
+        else
+            nonCached->push(page);
 
-		s->pop();
-	}
+        s->pop();
+    }
 }
 
 bool vtcIsPageInCacheLOCK(uint32_t pageInfo)
 {
-	LOCK(vt.cachedPagesMutex)
-	return (vt.cachedPages.count(pageInfo) > 0);
+    LOCK(vt.cachedPagesMutex)
+    return (vt.cachedPages.count(pageInfo) > 0);
 }
 
 void vtcInsertPageIntoCacheLOCK(uint32_t pageInfo, void * image_data)
 {
-	LOCK(vt.cachedPagesMutex)
-	vt.cachedPages.insert(pair<uint32_t, void *>(pageInfo, image_data));
+    LOCK(vt.cachedPagesMutex)
+    vt.cachedPages.insert(pair<uint32_t, void *>(pageInfo, image_data));
 }
 
 void * vtcRetrieveCachedPageLOCK(uint32_t pageInfo)
 {
-	LOCK(vt.cachedPagesMutex)
-	assert(vt.cachedPages.count(pageInfo));
-	return vt.cachedPages.find(pageInfo)->second;
+    LOCK(vt.cachedPagesMutex)
+    assert(vt.cachedPages.count(pageInfo));
+    return vt.cachedPages.find(pageInfo)->second;
 }
 
 void vtcReduceCacheIfNecessaryLOCK(clock_t currentTime)
 {
-	LOCK(vt.cachedPagesMutex)
+    LOCK(vt.cachedPagesMutex)
 
-	uint32_t size = (uint32_t)vt.cachedPages.size();
+    uint32_t size = (uint32_t)vt.cachedPages.size();
 
-	if (size > c.maxCachedPages)
-	{
-		uint32_t pagesToErase = (size - c.maxCachedPages) * 4;
-		if (pagesToErase > (c.maxCachedPages / 10)) pagesToErase = c.maxCachedPages / 10;
-		multimap<clock_t, uint32_t> oldestPages;
+    if (size > c.maxCachedPages)
+    {
+        uint32_t pagesToErase = (size - c.maxCachedPages) * 4;
+        if (pagesToErase > (c.maxCachedPages / 10)) pagesToErase = c.maxCachedPages / 10;
+        multimap<clock_t, uint32_t> oldestPages;
 
-		#if DEBUG_LOG > 0
-			printf("Thread %llu: RAM-cache has %i too many pages - erasing the %i least recently touched pages!\n", THREAD_ID, (size - c.maxCachedPages), pagesToErase);
-		#endif
+        #if DEBUG_LOG > 0
+            printf("Thread %llu: RAM-cache has %i too many pages - erasing the %i least recently touched pages!\n", THREAD_ID, (size - c.maxCachedPages), pagesToErase);
+        #endif
 
-		for (uint32_t i = 0; i < pagesToErase; i++)
-			oldestPages.insert(pair<clock_t, uint32_t>(currentTime+1+i, i));
+        for (uint32_t i = 0; i < pagesToErase; i++)
+            oldestPages.insert(pair<clock_t, uint32_t>(currentTime+1+i, i));
 
-		map<uint32_t, clock_t>::iterator cachedIter;
-		for(cachedIter = vt.cachedPagesAccessTimes.begin(); cachedIter != vt.cachedPagesAccessTimes.end(); ++cachedIter)
-		{
-			if (cachedIter->second < oldestPages.rbegin()->first)
-			{
-				oldestPages.insert(pair<clock_t, uint32_t>(cachedIter->second, cachedIter->first));
+        map<uint32_t, clock_t>::iterator cachedIter;
+        for(cachedIter = vt.cachedPagesAccessTimes.begin(); cachedIter != vt.cachedPagesAccessTimes.end(); ++cachedIter)
+        {
+            if (cachedIter->second < oldestPages.rbegin()->first)
+            {
+                oldestPages.insert(pair<clock_t, uint32_t>(cachedIter->second, cachedIter->first));
 
-				oldestPages.erase(--oldestPages.rbegin().base()); // this really is the easiest way to just erase the last element - C++ sucks
-			}
-		}
+                oldestPages.erase(--oldestPages.rbegin().base()); // this really is the easiest way to just erase the last element - C++ sucks
+            }
+        }
 
-		assert(oldestPages.size() == pagesToErase);
+        assert(oldestPages.size() == pagesToErase);
 
-		multimap<clock_t, uint32_t>::iterator oldestIter;
-		for(oldestIter = oldestPages.begin(); oldestIter != oldestPages.end(); ++oldestIter)
-		{
-			uint32_t pageInfo = oldestIter->second;
-			_vtcRemoveCachedPage(pageInfo);
+        multimap<clock_t, uint32_t>::iterator oldestIter;
+        for(oldestIter = oldestPages.begin(); oldestIter != oldestPages.end(); ++oldestIter)
+        {
+            uint32_t pageInfo = oldestIter->second;
+            _vtcRemoveCachedPage(pageInfo);
 
-			#if DEBUG_LOG > 1
-				printf("Thread %llu: Un-loading page from RAM-cache: Mip:%u %u/%u\n", THREAD_ID, EXTRACT_MIP(pageInfo), EXTRACT_X(pageInfo), EXTRACT_Y(pageInfo));
-			#endif
-		}
-	}
+            #if DEBUG_LOG > 1
+                printf("Thread %llu: Un-loading page from RAM-cache: Mip:%u %u/%u\n", THREAD_ID, EXTRACT_MIP(pageInfo), EXTRACT_X(pageInfo), EXTRACT_Y(pageInfo));
+            #endif
+        }
+    }
 }
 
 void _vtcRemoveCachedPage(uint32_t pageInfo)
 {
-	void *data = vt.cachedPages[pageInfo];
-	free(data);
-	vt.cachedPages.erase(pageInfo);
-	vt.cachedPagesAccessTimes.erase(pageInfo);
+    void *data = vt.cachedPages[pageInfo];
+    free(data);
+    vt.cachedPages.erase(pageInfo);
+    vt.cachedPagesAccessTimes.erase(pageInfo);
 }

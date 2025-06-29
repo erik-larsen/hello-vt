@@ -1,19 +1,19 @@
 /*!
- * @file	LibVT.h
- * @brief	The external header file for LibVT, declares public functions.
+ * @file    LibVT.h
+ * @brief    The external header file for LibVT, declares public functions.
  */
 
 
 /*!
  * @fn vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pageBorder, const uint8_t _mipChainLength, const uint16_t _pageDimension)
  * @brief Initializes LibVT and must be called previous to all other functions.
- * @param[in] _tileDir			The full path to the tile directory.
- * @param[in] _pageExtension	This is the extension and format of the stored page tiles, Values: "jpg" or "png"
- * @param[in] _pageBorder		This is the border each page has in pixels, Values:	0-8
- * @param[in] _mipChainLength	The length of the mipchain, determined by the virt. tex. size and the page size, Values: 2 - 11
- * @param[in] _pageDimension	This is the width/height of a single page in pixels, Values: 64, 128, 256 or 512
+ * @param[in] _tileDir            The full path to the tile directory.
+ * @param[in] _pageExtension    This is the extension and format of the stored page tiles, Values: "jpg" or "png"
+ * @param[in] _pageBorder        This is the border each page has in pixels, Values:    0-8
+ * @param[in] _mipChainLength    The length of the mipchain, determined by the virt. tex. size and the page size, Values: 2 - 11
+ * @param[in] _pageDimension    This is the width/height of a single page in pixels, Values: 64, 128, 256 or 512
 */
-void		vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pageBorder, const uint8_t _mipChainLength, const uint16_t _pageDimension);
+void        vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pageBorder, const uint8_t _mipChainLength, const uint16_t _pageDimension);
 
 /*!
  * @fn vtLoadShaders(GLuint* readbackShader, GLuint* renderVTShader)
@@ -31,14 +31,14 @@ void        vtLoadShaders(GLuint* readbackShader, GLuint* renderVTShader);
  * @param[in] readbackShader The shader program created with glCreateProgram() from the readback.[vert/frag] shader and prepended by the shader prelude from vtGetShaderPrelude(). Can pass 0 if you bind the uniform samplers to the texunits yourself.
  * @param[in] renderVTShader The shader program created with glCreateProgram() from the renderVT.[vert/frag] shader and prepended by the shader prelude from vtGetShaderPrelude(). Can pass 0 if you bind the uniform samplers to the texunits yourself.
  */
-void		vtPrepare(const GLuint readbackShader, const GLuint renderVTShader);
+void        vtPrepare(const GLuint readbackShader, const GLuint renderVTShader);
 
 /*!
  * @fn vtGetShaderPrelude()
  * @brief Returns the shader prelude that must be prepended to the virtual texturing shaders before compiling them.  Unnecessary when using vtLoadShaders().
  * @return The shader prelude buffer, must be free()ed after usage.
  */
-char *		vtGetShaderPrelude();
+char *        vtGetShaderPrelude();
 
 
 /*!
@@ -46,13 +46,13 @@ char *		vtGetShaderPrelude();
  * @brief Sets up LibVT for usage with current rendering parameters. Must be called once at start after vtPrepare() and previous to other functions, and then everytime width/height/fov/nearPlane/farPlance change. Can't be called between vtPerformReadback() and vtExtractNeeded().
  * @post If USE_FBO is activated it has the following side effect: glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0); glDisable(GL_TEXTURE_RECTANGLE_ARB); glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
 
- * @param[in] _w			The new width.
- * @param[in] _h			The new height.
- * @param[in] fovInDegrees	The new field of view in degrees. Pass 0 is you are using orthographic and not perspectivic projection. Not used if no PREPASS_RESOLUTION_REDUCTION_SHIFT takes place.
- * @param[in] nearPlane		The new near plane as it would be passed to gluPerspective(). Not used if no PREPASS_RESOLUTION_REDUCTION_SHIFT takes place.
- * @param[in] farPlane		The new far plane as it would be passed to gluPerspective(). Not used if no PREPASS_RESOLUTION_REDUCTION_SHIFT takes place.
+ * @param[in] _w            The new width.
+ * @param[in] _h            The new height.
+ * @param[in] fovInDegrees    The new field of view in degrees. Pass 0 is you are using orthographic and not perspectivic projection. Not used if no PREPASS_RESOLUTION_REDUCTION_SHIFT takes place.
+ * @param[in] nearPlane        The new near plane as it would be passed to gluPerspective(). Not used if no PREPASS_RESOLUTION_REDUCTION_SHIFT takes place.
+ * @param[in] farPlane        The new far plane as it would be passed to gluPerspective(). Not used if no PREPASS_RESOLUTION_REDUCTION_SHIFT takes place.
  */
-void		vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, const float nearPlane, const float farPlane);
+void        vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, const float nearPlane, const float farPlane);
 
 
 /*!
@@ -60,7 +60,7 @@ void		vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, 
  * @brief Must be called every frame previous to rendering the virtual textured geometry for the readback pass using the readbackShader if READBACK_MODE is not kCustomReadback.
  * @post If USE_FBO is activated it binds a framebuffer, if PREPASS_RESOLUTION_REDUCTION_SHIFT is not zero the viewport and projection matrix are modified.
  */
-void		vtPrepareReadback();
+void        vtPrepareReadback();
 
 
 /*!
@@ -68,16 +68,16 @@ void		vtPrepareReadback();
  * @brief Must be called every frame after rendering the virtual textured geometry for the readback pass using the readbackShader if READBACK_MODE is not kCustomReadback.
  * @post If USE_FBO is activated the side effects are: glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0); glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0); glDisable(GL_TEXTURE_RECTANGLE_ARB);  if PREPASS_RESOLUTION_REDUCTION_SHIFT is non-zero the side effect is: glMatrixMode(GL_MODELVIEW);
  */
-void		vtPerformReadback();
+void        vtPerformReadback();
 
 
 /*!
  * @fn vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
  * @brief Must be called every frame after vtPerformReadback(). If you do not use vtPrepareReadback() and vtPerformReadback() but do the readback yourself (kCustomReadback, e.g. OSG) you must pass the RGBA buffer, as parameter else it must be NULL.
  *
- * @param[in] ext_buffer_BGRA			If your READBACK_MODE is kCustomReadback pass the valid buffer you have read back yourself, else pass NULL.
+ * @param[in] ext_buffer_BGRA            If your READBACK_MODE is kCustomReadback pass the valid buffer you have read back yourself, else pass NULL.
 */
-void		vtExtractNeededPages(const uint32_t *ext_buffer_BGRA);
+void        vtExtractNeededPages(const uint32_t *ext_buffer_BGRA);
 
 
 /*!
@@ -85,27 +85,27 @@ void		vtExtractNeededPages(const uint32_t *ext_buffer_BGRA);
  * @brief Must be called every frame before rendering the virtual textured geometry for the main pass using the renderVTShader.
  * @post Often has the following side effect: glActiveTexture(GL_TEXTURE0);
 */
-void		vtMapNewPages();
+void        vtMapNewPages();
 
 
 /*!
  * @fn vtShutdown()
  * @brief Must be called before the program exits if multithreading is enabled.
  */
-void		vtShutdown();
+void        vtShutdown();
 
 
 /*!
  * @fn vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, uint8_t *_mipChainLength, uint32_t *_pageDimension)
  * @brief Scans the tile storage directory at the given path and determines the configuration.
- * @param[in] _tileDir			The path of the tile directory to scan.
- * @param[out] _pageExtension	A pointer to a char array of minimum length 5 where the determined tile extension will be stored.
- * @param[out] _pageBorder		A pointer to a uint8_t where the size of the tile border will be stored.
- * @param[out] _mipChainLength	A pointer to a uint8_t where the size of the mip chain length will be stored.
- * @param[out] _pageDimension	A pointer to a uint32_t where the size of the tiles will be stored.
+ * @param[in] _tileDir            The path of the tile directory to scan.
+ * @param[out] _pageExtension    A pointer to a char array of minimum length 5 where the determined tile extension will be stored.
+ * @param[out] _pageBorder        A pointer to a uint8_t where the size of the tile border will be stored.
+ * @param[out] _mipChainLength    A pointer to a uint8_t where the size of the mip chain length will be stored.
+ * @param[out] _pageDimension    A pointer to a uint32_t where the size of the tiles will be stored.
  * @return Returns whether the directory seems to be a valid tile store.
  */
-bool		vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, uint8_t *_mipChainLength, uint32_t *_pageDimension);
+bool        vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, uint8_t *_mipChainLength, uint32_t *_pageDimension);
 
 
 /*!
@@ -113,7 +113,7 @@ bool		vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, 
  * @brief Provides the bias that should be used for the float bias for the uniform "mip_bias" for both shaders.
  * @return The bias to use as uniform for the shaders.
  */
-float		vtGetBias();
+float        vtGetBias();
 
 
 /*!
@@ -141,10 +141,10 @@ float		vtGetBias();
  * \b EXAMPLES:<br>
  * \ref SimpleExample Simple LibVT usage example<br>
  * <br>
- *	NOTE: The "readback" shader has to be used exactly as provided and can't be modified. As seen in the sample you have to use this shader during rendering your virtual textured objects in the pre-pass.<br>
- *	NOTE: The "renderVT" shader can be modified as you wish, but you have to retain the virtual texture functions and use sampleVirtualTexture(calculateVirtualTextureCoordinates()) to sample from the virtual texture. Don't forget to prepend the prelude to the shadercode.<br>
+ *    NOTE: The "readback" shader has to be used exactly as provided and can't be modified. As seen in the sample you have to use this shader during rendering your virtual textured objects in the pre-pass.<br>
+ *    NOTE: The "renderVT" shader can be modified as you wish, but you have to retain the virtual texture functions and use sampleVirtualTexture(calculateVirtualTextureCoordinates()) to sample from the virtual texture. Don't forget to prepend the prelude to the shadercode.<br>
  *  NOTE: As seen in the code, after you've finished rendering the virtual textures objects you can render other objects to your liking. You can use any shaders you wish. Be careful never to use texture units that LibVT uses, namely as defined in "LibVT_Config.h" TEXUNIT_FOR_PAGETABLE, TEXUNIT_FOR_PHYSTEX and TEXUNIT_FOR_MIPCALC.<br>
- *	NOTE: Many other requirements are listed throughout the remaining documentation. Read it carefully!<br><br><br>
+ *    NOTE: Many other requirements are listed throughout the remaining documentation. Read it carefully!<br><br><br>
  *
  *
  *
@@ -245,56 +245,56 @@ float		vtGetBias();
  * @code
  * void init() // called at startup
  * {
- * 	vtInit("/Path/to/the/tile/dir/", "jpg", 0, 8, 256); // jpeg tiles, no border, mipchain length 8, and 256x256 tiles
+ *     vtInit("/Path/to/the/tile/dir/", "jpg", 0, 8, 256); // jpeg tiles, no border, mipchain length 8, and 256x256 tiles
  *
- * 	char *prelude = vtGetShaderPrelude();
+ *     char *prelude = vtGetShaderPrelude();
  *
- * 	readbackShader = loadShadersWithPrelude("readback", prelude);
- * 	renderVTShader = loadShadersWithPrelude("renderVT", prelude);
+ *     readbackShader = loadShadersWithPrelude("readback", prelude);
+ *     renderVTShader = loadShadersWithPrelude("renderVT", prelude);
  *
- * 	free(prelude);
+ *     free(prelude);
  *
- * 	vtPrepare(readbackShader, renderVTShader); // opengl must be ready when you call this
+ *     vtPrepare(readbackShader, renderVTShader); // opengl must be ready when you call this
  *
- * 	renderViewHasBeenResizedOrFovChanged(640, 480, 90.0);
+ *     renderViewHasBeenResizedOrFovChanged(640, 480, 90.0);
  * }
  *
  * void renderViewHasBeenResizedOrFovChanged(int newW, int newH, float newFov) // called at start and when w/h/fov change
  * {
- * 	float nearPlane = 1.0f, farPlane = 7000.0f;
+ *     float nearPlane = 1.0f, farPlane = 7000.0f;
  *
- * 	vtReshape(newW, newH, newFov, nearPlane, farPlane);
+ *     vtReshape(newW, newH, newFov, nearPlane, farPlane);
  * }
  *
  * void render() // called every frame
  * {
- * 	vtPrepareReadback();
- * 		glUseProgram(readbackShader);
- * 		glUniform1f(glGetUniformLocation(readbackShader, "mip_bias"), vtGetBias());
+ *     vtPrepareReadback();
+ *         glUseProgram(readbackShader);
+ *         glUniform1f(glGetUniformLocation(readbackShader, "mip_bias"), vtGetBias());
  *
- * 			renderVirtualTexturedObjects();
+ *             renderVirtualTexturedObjects();
  *
- * 		glUseProgram(0);
- * 	vtPerformReadback();
+ *         glUseProgram(0);
+ *     vtPerformReadback();
  *
  *  // IN PBO MODE: you can burn a lot of CPU cycles here because the GPU is busy transfering the readback buffer back,
  *  //              and if you call vtExtractNeededPages() too "early" it will start by blocking until the transfer is done
  *
- * 	vtExtractNeededPages(NULL); // turn on PBO readback and move this to the very beginning of the frame to delay the readback until the next frame
- * 	vtMapNewPages();
+ *     vtExtractNeededPages(NULL); // turn on PBO readback and move this to the very beginning of the frame to delay the readback until the next frame
+ *     vtMapNewPages();
  *
  *
- * 	glUseProgram(renderVTShader);
- * 		glUniform1f(glGetUniformLocation(renderVTShader, "mip_bias"), vtGetBias());
- * 		renderVirtualTexturedObjects();
- * 	glUseProgram(0);
+ *     glUseProgram(renderVTShader);
+ *         glUniform1f(glGetUniformLocation(renderVTShader, "mip_bias"), vtGetBias());
+ *         renderVirtualTexturedObjects();
+ *     glUseProgram(0);
  *
- * 	renderSomeOtherObjects();
+ *     renderSomeOtherObjects();
  * }
  *
  * void shutdown() // called at shutdown
  * {
- * 	vtShutdown();
+ *     vtShutdown();
  * }
  * @endcode
  *
