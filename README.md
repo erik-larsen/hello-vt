@@ -129,6 +129,7 @@ For an overview of LibVT's multithreading implementation, see the [LibVT readme]
 - [ ] Add OpenGLES3 / WebGL2 code path
 - [ ] Async + double-buffered PBO readback
 - [ ] ETC2 GPU texture compression (guaranteed in WebGL2)
+- [ ] Anisotropic texture filtering (via GL_EXT_texture_filter_anisotropic)
 - [ ] Maybe use faster, browser-standard decompression libs, libjpeg-turbo and libpng
 - [ ] Maybe handle more image tile formats (any requests?)
 
