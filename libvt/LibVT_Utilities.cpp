@@ -3,38 +3,6 @@
 
 extern vtConfig c;
 
-
-uint32_t * vtuDownsampleImageRGBA(const uint32_t *tex)
-{
-    uint32_t *smallTex = (uint32_t *)malloc(c.pageDimension * c.pageDimension);
-    assert(smallTex);
-
-    for (uint16_t x = 0; x < c.pageDimension / 2; x++)
-    {
-        for (uint16_t y = 0; y < c.pageDimension / 2; y++)
-        {
-#ifdef COLOR_CODE_MIPPED_PHYSTEX
-            smallTex[y * (c.pageDimension / 2) + x] = (255 << 24) + (0 << 16) + (0 << 8) + 255;
-#else
-            uint32_t pix1 = tex[(y*2) * c.pageDimension + (x*2)];
-            uint32_t pix2 = tex[(y*2+1) * c.pageDimension + (x*2)];
-            uint32_t pix3 = tex[(y*2) * c.pageDimension + (x*2+1)];
-            uint32_t pix4 = tex[(y*2+1) * c.pageDimension + (x*2+1)];
-
-            uint32_t b1 = BYTE1(pix1) + BYTE1(pix2) + BYTE1(pix3) + BYTE1(pix4);
-            uint32_t b2 = BYTE2(pix1) + BYTE2(pix2) + BYTE2(pix3) + BYTE2(pix4);
-            uint32_t b3 = BYTE3(pix1) + BYTE3(pix2) + BYTE3(pix3) + BYTE3(pix4);
-            uint32_t b4 = BYTE4(pix1) + BYTE4(pix2) + BYTE4(pix3) + BYTE4(pix4);
-
-
-            smallTex[y * (c.pageDimension / 2) + x] =  ((b4 / 4) << 24) + ((b3 / 4) << 16) + ((b2 / 4) << 8) + (b1 / 4); // ARGB
-#endif
-        }
-    }
-
-    return smallTex;
-}
-
 uint32_t * vtuDownsampleImageRGB(const uint32_t *_tex)
 {
     uint8_t *tex = (uint8_t *) _tex;
@@ -118,10 +86,8 @@ void * vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_s
 {
     uint32_t fs = 0;
     uint32_t *fsp = &fs;
-    char *fileData;
-    FILE *f;
 
-    f = fopen(filePath, "rb");
+    FILE *f = fopen(filePath, "rb");
     if (!f)
     {
         printf("Error: tried to load nonexisting file");
@@ -145,15 +111,12 @@ void * vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_s
         *fsp = ftell(f) - offset;
     }
 
-
     fseek(f, offset, SEEK_SET);
 
-
-    fileData = (char *) malloc(*fsp);
+    char *fileData = (char *) malloc(*fsp);
     assert(fileData);
 
     result = fread(fileData, 1, *fsp, f);
-
     assert(result == *fsp);
 
     fclose (f);
