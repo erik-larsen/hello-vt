@@ -9,7 +9,6 @@
 #include <OpenGLES/GLES2/gl2.h>
 #include <OpenGLES/GLES2/gl2ext.h>
 #define glBindFramebufferEXT glBindFramebuffer
-#define glOrtho glOrthof
 #define GL_FRAMEBUFFER_EXT    GL_FRAMEBUFFER
 #define glDeleteFramebuffersEXT glDeleteFramebuffers
 #define glGenFramebuffersEXT glGenFramebuffers
@@ -44,7 +43,6 @@
 
 #else
     #error COULD_NOT_GUESS_TARGET_SYSTEM
-
 #endif
 
 #include <iostream>
@@ -93,19 +91,6 @@ enum {
 #define READBACK_MODE_BACKBUFFER    ((READBACK_MODE < kFBOReadPixels) && (!READBACK_MODE_NONE))
 #define READBACK_MODE_GET_TEX_IMAGE (READBACK_MODE == kFBOGetTexImage || READBACK_MODE == kBackbufferGetTexImage)
 #define READBACK_MODE_READ_PIXELS   (READBACK_MODE == kFBOReadPixels || READBACK_MODE == kBackbufferReadPixels)
-
-#define DecompressionPNG 4
-#define DecompressionJPEG 8
-#define DecompressionAllFormats 16
-
-#define DecompressionLibPNG 4
-#define DecompressionSTBIPNG 5
-#define DecompressionLibJPEG 8
-#define DecompressionLibJPEGTurbo 9
-#define DecompressionSTBIJPEG 11
-#define DecompressionMac 16
-#define DecompressionDevil 17
-#define DecompressionImageMagick 18
 
 #define BYTE1(v)                    ((uint8_t) (v))
 #define BYTE2(v)                    ((uint8_t) (((uint32_t) (v)) >> 8))
@@ -156,7 +141,7 @@ struct storageInfo
     uint8_t     mip;
 };
 
-struct vtConfig // TODO: constify?
+struct vtConfig
 {
     uint32_t    pageDimension;
     string      tileDir, pageCodec;
@@ -176,7 +161,7 @@ struct vtData
     bool                    mipLevelTouched[12];
     uint16_t                mipLevelMinrow[12];
     uint16_t                mipLevelMaxrow[12];
-    storageInfo             textureStorageInfo[MAX_PHYS_TEX_DIMENSION_PAGES][MAX_PHYS_TEX_DIMENSION_PAGES];    // yes allocating this to the max size is a memory waste - it consumes 50k - but a vector of vectors is 1 magnitude slower
+    storageInfo             textureStorageInfo[MAX_PHYS_TEX_DIMENSION_PAGES][MAX_PHYS_TEX_DIMENSION_PAGES];
 
     uint16_t                necessaryPageCount, newPageCount, missingPageCount;
     float                   bias;
