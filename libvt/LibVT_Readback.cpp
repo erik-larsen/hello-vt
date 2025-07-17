@@ -4,7 +4,6 @@
 extern vtData vt;
 extern vtConfig c;
 
-
 void vtPrepareReadback()
 {
     if (READBACK_MODE_FBO)
@@ -16,16 +15,6 @@ void vtPrepareReadback()
     if (PREPASS_RESOLUTION_REDUCTION_SHIFT)
     {
         glViewport(0, 0, vt.w, vt.h);
-
-        if (vt.fovInDegrees > 0.0)
-        {
-#if !GL_ES_VERSION_2_0
-            glMatrixMode(GL_PROJECTION);
-            glPushMatrix();
-            glLoadMatrixd((double *)vt.projectionMatrix);
-            glMatrixMode(GL_MODELVIEW);
-#endif
-        }
     }
 }
 
@@ -33,14 +22,12 @@ void vtPerformReadback()
 {
     uint32_t *buffer = 0;
 
-
 #if !GL_ES_VERSION_2_0
     if (USE_PBO_READBACK)
         glBindBuffer(GL_PIXEL_PACK_BUFFER, vt.pboReadback);
     else
 #endif
         buffer = vt.readbackBuffer;
-
 
 #if !GL_ES_VERSION_2_0
     if (READBACK_MODE_GET_TEX_IMAGE)
@@ -57,14 +44,10 @@ void vtPerformReadback()
         glReadPixels(0, 0, vt.w, vt.h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer);
 #else
     glReadPixels(0, 0, vt.w, vt.h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer);
-    //glReadPixels(0, 0, vt.w, vt.h, GL_RGBA, GL_UNSIGNED_BYTE, (GLubyte *)buffer);
 #endif
-
-
 
     if (READBACK_MODE_FBO)
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-
 
 #if !GL_ES_VERSION_2_0
     if (READBACK_MODE_GET_TEX_IMAGE)
@@ -77,23 +60,13 @@ void vtPerformReadback()
     if (READBACK_MODE_BACKBUFFER)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
 #if !GL_ES_VERSION_2_0
     if (USE_PBO_READBACK)
         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 #endif
 
-
     if (PREPASS_RESOLUTION_REDUCTION_SHIFT)
     {
-        if (vt.fovInDegrees > 0.0)
-        {
-#if !GL_ES_VERSION_2_0
-            glMatrixMode(GL_PROJECTION);
-            glPopMatrix();
-            glMatrixMode(GL_MODELVIEW);
-#endif
-        }
         glViewport(0, 0, vt.real_w, vt.real_h);
     }
 }
@@ -230,7 +203,6 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
     for(tmpPagesIter2 = tmpPages2.rbegin(); tmpPagesIter2 != tmpPages2.rend(); ++tmpPagesIter2)
         tmpPages.push(tmpPagesIter2->second);
 
-
 #if !GL_ES_VERSION_2_0
     if (USE_PBO_READBACK)
     {
@@ -243,7 +215,6 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
     queue<uint32_t>    nonCachedPages;
 
     vtcSplitPagelistIntoCachedAndNoncachedLOCK(&tmpPages, &cachedPages, &nonCachedPages);
-
 
     {    // lock
         LOCK(vt.neededPagesMutex)

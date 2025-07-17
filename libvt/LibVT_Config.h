@@ -3,7 +3,6 @@
  * @brief    The Config-file for LibVT.
  */
 
-
 /*!
  * @def        TEXUNIT_FOR_PAGETABLE
  * @brief    The texunit to use for the page table texture, can't be used otherwise in the client app <br>
@@ -24,7 +23,6 @@
  * Note:    0 - 15, depending on the hardware
  */
 #define TEXUNIT_FOR_MIPCALC            3
-
 
 // ********** PAGE STORE OPTIONS **********
 
@@ -58,7 +56,6 @@
  * Values:    GL_NEAREST, GL_LINEAR, GL_NEAREST_MIPMAP_NEAREST (probably dumb), GL_LINEAR_MIPMAP_NEAREST (probably dumb), GL_NEAREST_MIPMAP_LINEAR (probably dumb), GL_LINEAR_MIPMAP_LINEAR
  */
 #define VT_MIN_FILTER                GL_NEAREST
-
 
 // ********** PERFORMANCE OPTIONS **********
 

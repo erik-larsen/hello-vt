@@ -130,7 +130,6 @@ void vtMapNewPages()
 
                 assert((x < c.physTexDimensionPages) && (y < c.physTexDimensionPages));
 
-
                 // map page
                 //vt.textureStorageInfo[x][y].active = true;
                 vt.textureStorageInfo[x][y].x = x_coord;
@@ -152,7 +151,6 @@ void vtMapNewPages()
                         _mapPageFallbackEntries(mip - 1, x_coord * 2 + 1, y_coord * 2 + 1, mip, x, y);
                     }
                 }
-
 
 #if USE_PBO_PHYSTEX
                 memcpy(phys_buffer + c.pageMemsize * newPageCount, image_data, c.pageMemsize);
@@ -199,7 +197,6 @@ void vtMapNewPages()
 
         glActiveTexture(GL_TEXTURE0 + TEXUNIT_FOR_PAGETABLE);
 
-
 #if USE_PBO_PAGETABLE
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, vt.pboPagetable);
         glBufferData(GL_PIXEL_UNPACK_BUFFER, (vt.pageTableMipOffsets[c.mipChainLength - 1] + 1) * 4, 0, GL_STREAM_DRAW);
@@ -209,7 +206,6 @@ void vtMapNewPages()
         memcpy(table_buffer, vt.pageTables[0], (vt.pageTableMipOffsets[c.mipChainLength - 1] + 1) * 4);
         glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 #endif
-
 
         // done, upload pageTable
         for (uint8_t i = 0; i < c.mipChainLength; i++)
@@ -223,7 +219,6 @@ void vtMapNewPages()
 #endif
             }
         }
-
 
 #if USE_PBO_PAGETABLE
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -254,7 +249,6 @@ void vtMapNewPages()
     __debugEraseCachedPages();
 #endif
 
-    
 //    // testcode for performing quality tests. it spews out a list of loaded pages every frame. this can be compared against a reference list with pixel coverage information (produced by commented code in vtExtractNeededPages()). make sure the simulation runs at 60FPS and is at a specific walthrough position each frame. 
 //    for (int x = 0; x < c.physTexDimensionPages; x++)
 //    {
@@ -268,7 +262,6 @@ void vtMapNewPages()
 //    }
 //    printf("\n\nNEWFRAME\n\n");
 }
-
 
 void _mapPageFallbackEntries(int m, int x_coord, int y_coord, int mip, int x, int y) // TODO: test long mip chain
 {
@@ -341,7 +334,6 @@ void __debugEraseCachedPages()
         for (uint16_t x = 0; x < (c.virtTexDimensionPages >> i); x++)
             for (uint16_t y = 0; y < (c.virtTexDimensionPages >> i); y++)
                 PAGE_TABLE(i, x, y) = kTableFree;
-
 
     for (int x = 0; x < c.physTexDimensionPages; x++)
     {

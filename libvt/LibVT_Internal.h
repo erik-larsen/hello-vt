@@ -107,7 +107,6 @@ enum {
 #define DecompressionDevil 17
 #define DecompressionImageMagick 18
 
-
 #define BYTE1(v)                    ((uint8_t) (v))
 #define BYTE2(v)                    ((uint8_t) (((uint32_t) (v)) >> 8))
 #define BYTE3(v)                    ((uint8_t) (((uint32_t) (v)) >> 16))
@@ -122,7 +121,6 @@ enum {
     #define EXTRACT_Y(page)         (BYTE2(page))
     #define EXTRACT_X(page)         (BYTE3(page))
 #endif
-
 
 #define PAGE_TABLE(m, x, y)         (vt.pageTables[(m)][(y) * (c.virtTexDimensionPages >> (m)) + (x)])
 #define EXTRACT_MIP(page)           (BYTE1(page))

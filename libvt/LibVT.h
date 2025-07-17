@@ -3,7 +3,6 @@
  * @brief    The external header file for LibVT, declares public functions.
  */
 
-
 /*!
  * @fn vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pageBorder, const uint8_t _mipChainLength, const uint16_t _pageDimension)
  * @brief Initializes LibVT and must be called previous to all other functions.
@@ -40,7 +39,6 @@ void        vtPrepare(const GLuint readbackShader, const GLuint renderVTShader);
  */
 char *        vtGetShaderPrelude();
 
-
 /*!
  * @fn vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, const float nearPlane, const float farPlane)
  * @brief Sets up LibVT for usage with current rendering parameters. Must be called once at start after vtPrepare() and previous to other functions, and then everytime width/height/fov/nearPlane/farPlance change. Can't be called between vtPerformReadback() and vtExtractNeeded().
@@ -54,7 +52,6 @@ char *        vtGetShaderPrelude();
  */
 void        vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, const float nearPlane, const float farPlane);
 
-
 /*!
  * @fn vtPrepareReadback()
  * @brief Must be called every frame previous to rendering the virtual textured geometry for the readback pass using the readbackShader if READBACK_MODE is not kCustomReadback.
@@ -62,14 +59,12 @@ void        vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDeg
  */
 void        vtPrepareReadback();
 
-
 /*!
  * @fn vtPerformReadback()
  * @brief Must be called every frame after rendering the virtual textured geometry for the readback pass using the readbackShader if READBACK_MODE is not kCustomReadback.
- * @post If USE_FBO is activated the side effects are: glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0); glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0); glDisable(GL_TEXTURE_RECTANGLE_ARB);  if PREPASS_RESOLUTION_REDUCTION_SHIFT is non-zero the side effect is: glMatrixMode(GL_MODELVIEW);
+ * @post If USE_FBO is activated the side effects are: glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0); glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0); glDisable(GL_TEXTURE_RECTANGLE_ARB);
  */
 void        vtPerformReadback();
-
 
 /*!
  * @fn vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
@@ -79,7 +74,6 @@ void        vtPerformReadback();
 */
 void        vtExtractNeededPages(const uint32_t *ext_buffer_BGRA);
 
-
 /*!
  * @fn vtMapNewPages()
  * @brief Must be called every frame before rendering the virtual textured geometry for the main pass using the renderVTShader.
@@ -87,13 +81,11 @@ void        vtExtractNeededPages(const uint32_t *ext_buffer_BGRA);
 */
 void        vtMapNewPages();
 
-
 /*!
  * @fn vtShutdown()
  * @brief Must be called before the program exits if multithreading is enabled.
  */
 void        vtShutdown();
-
 
 /*!
  * @fn vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, uint8_t *_mipChainLength, uint32_t *_pageDimension)
@@ -107,14 +99,12 @@ void        vtShutdown();
  */
 bool        vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, uint8_t *_mipChainLength, uint32_t *_pageDimension);
 
-
 /*!
  * @fn vtGetBias()
  * @brief Provides the bias that should be used for the float bias for the uniform "mip_bias" for both shaders.
  * @return The bias to use as uniform for the shaders.
  */
 float        vtGetBias();
-
 
 /*!
  * @mainpage LibVT Index Page
@@ -238,7 +228,6 @@ float        vtGetBias();
  * @code generateTextureAtlas -s=129024 -n=3 -i=4:4:__p1ground.png:__p2ground.png:__p3ground.png:__p4ground.png:__p5ground.png:__p6ground.png:__p7ground.png:__p8ground.png:__p9ground.png:__p10ground.png:__p11ground.png:__p12ground.png:__p13ground.png:__p14ground.png:__p15ground.png:__p16ground.png small*.jpg p1b* p2b* p3b* p5b* p6b* p8b* p9b* p11b* p12b* p13b* p14b* p15b* p16b* @endcode
  *
  */
-
 
 /*! \page SimpleExample Simple LibVT usage example
  *

@@ -4,7 +4,6 @@
 vtData vt;
 vtConfig c;
 
-
 void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pageBorder, const uint8_t _mipChainLength, const uint16_t _pageDimension)
 {
     if (c.tileDir != "") vt_fatal("Error: calling vtInit() twice ain't good!\n");
@@ -61,7 +60,6 @@ void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pag
             printf("Warning: PAGE_BORDER not necessary for filtering with GL_NEAREST*\n");
     #endif
 
-
     // init translation tables, offsets and allocate page table
     uint32_t offsetCounter = 0;
     for (uint8_t i = 0; i < c.mipChainLength; i++)
@@ -80,14 +78,11 @@ void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pag
     for (uint8_t i = 0; i < c.mipChainLength; i++)
         vt.pageTables[i] = (uint32_t *)(pageTableBuffer + vt.pageTableMipOffsets[i]);
 
-
-
     // check the tile store
     char buf[255];
     for (uint8_t i = 0; i < 16; i++)
     {
         snprintf(buf, 255, "%s%stiles_b%u_level%u%stile_%u_0_0.%s", _tileDir, PATH_SEPERATOR, c.pageBorder, i, PATH_SEPERATOR, i, c.pageCodec.c_str());
-
 
         if (vtuFileExists(buf) != (i < c.mipChainLength))
             vt_fatal("Error: %s doesn't seem to be a page store with MIP_CHAIN_LENGTH = %u, c.pageCodec.c_str() = %s and c.pageBorder = %u!", c.tileDir.c_str(), c.mipChainLength, c.pageCodec.c_str(), c.pageBorder);
@@ -106,7 +101,6 @@ void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pag
         for (uint8_t x = 0; x < (c.virtTexDimensionPages >> i); x++)
             for (uint8_t y = 0; y < (c.virtTexDimensionPages >> i); y++)
                 vt.neededPages.push_back(MAKE_PAGE_INFO(i, x, y));
-
 
     #if ENABLE_MT == 1
         vt.backgroundThread = std::thread(&vtLoadNeededPages);
@@ -200,7 +194,6 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
     assert((TEXUNIT_FOR_PAGETABLE >= 0) && (TEXUNIT_FOR_PAGETABLE < max_texture_units));
     assert((TEXUNIT_FOR_PHYSTEX >= 0) && (TEXUNIT_FOR_PHYSTEX < max_texture_units));
 
-
     if (renderVTShader)
     {
         glUseProgram(renderVTShader);
@@ -215,11 +208,9 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
         glUseProgram(0);
     }
 
-
     glGenTextures(1, &vt.physicalTexture);
     glActiveTexture(GL_TEXTURE0 + TEXUNIT_FOR_PHYSTEX);
     glBindTexture(GL_TEXTURE_2D, vt.physicalTexture);
-
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, VT_MAG_FILTER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, VT_MIN_FILTER);
@@ -412,12 +403,10 @@ void vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, c
             glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_COMPARE_MODE, GL_NONE );
             glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_DEPTH_COMPONENT24, vt.w, vt.h, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 
-
             glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, vt.fbo);
 
             glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_ARB, vt.fboColorTexture, 0);
             glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_RECTANGLE_ARB, vt.fboDepthTexture, 0);
-
 
             if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
                 vt_fatal("Error: couldn't setup FBO %04x\n", (unsigned int)glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT));
