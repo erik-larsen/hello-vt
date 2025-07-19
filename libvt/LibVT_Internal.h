@@ -1,9 +1,7 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdarg.h>
 #include <time.h>
 #include <assert.h>
-#include <math.h>
 #include <sys/types.h>
 #include <dirent.h>
 
@@ -21,18 +19,12 @@
     #error COULD_NOT_GUESS_TARGET_SYSTEM
 #endif
 
-#include <iostream>
 #include <queue>
 #include <map>
-#include <vector>
 #include <string>
 
-//#undef TIME_UTC
-
 #include <thread>
-#include <functional>
 #define THREAD_ID static_cast<unsigned long long>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
-
 #if ENABLE_MT
 #include <atomic>
 #include <mutex>
