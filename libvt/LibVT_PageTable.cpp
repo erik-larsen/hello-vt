@@ -7,6 +7,64 @@ void _unmapPageFallbackEntries(int m, int x_coord, int y_coord, int x_search, in
 //void __debugEraseCachedPages();
 //#define DEBUG_ERASE_CACHED_PAGES_EVERY_FRAME
 
+uint32_t * vtDownsampleImageRGB(const uint32_t *_tex)
+{
+    uint8_t *tex = (uint8_t *) _tex;
+    uint8_t *smallTex = (uint8_t *)malloc((vt.cfg.pageDimension * vt.cfg.pageDimension * 3) / 4);
+    assert(smallTex);
+
+    for (uint16_t x = 0; x < vt.cfg.pageDimension / 2; x++)
+    {
+        for (uint16_t y = 0; y < vt.cfg.pageDimension / 2; y++)
+        {
+#ifdef COLOR_CODE_MIPPED_PHYSTEX
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3)] = 200;
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3) + 1] = 10;
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3) + 2] = 70;
+#else
+            uint8_t pix1 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3)];
+            uint8_t pix2 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3)];
+            uint8_t pix3 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3+3)];
+            uint8_t pix4 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3+3)];
+
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3)] = (pix1 + pix2 + pix3 + pix4) / 4;
+
+            pix1 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3) + 1];
+            pix2 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3) + 1];
+            pix3 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3+3) + 1];
+            pix4 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3+3) + 1];
+
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3) + 1] = (pix1 + pix2 + pix3 + pix4) / 4;
+
+            pix1 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3) + 2];
+            pix2 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3) + 2];
+            pix3 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3+3) + 2];
+            pix4 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3+3) + 2];
+
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3) + 2] = (pix1 + pix2 + pix3 + pix4) / 4;
+#endif
+        }
+    }
+
+    return (uint32_t *)smallTex;
+}
+
+void vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location)
+{
+    if (FALLBACK_ENTRIES)
+    {
+        const uint32_t pageEntry = PAGE_TABLE(mipmap_level + 1, x_coord / 2, y_coord / 2);
+        *((uint8_t *)&PAGE_TABLE(mipmap_level, x_coord, y_coord)) = kTableFree;
+        
+        _unmapPageFallbackEntries(mipmap_level, x_coord, y_coord, x_storage_location, y_storage_location, BYTE4(pageEntry), BYTE3(pageEntry), BYTE2(pageEntry));
+    }
+    else
+    {
+        PAGE_TABLE(mipmap_level, x_coord, y_coord) = kTableFree;
+        touchMipRow(mipmap_level, y_coord)
+    }
+}
+
 void vtMapNewPages()
 {
     queue<uint32_t>    newPages, zero;
@@ -39,7 +97,7 @@ void vtMapNewPages()
     }    // unlock
 
     // we do this here instead of in vtLoadNeededPages() when new pages are actually mapped so it runs on the mainThread and the cachedPagesAccessTimes structure doesn't need to be locked
-    vtcReduceCacheIfNecessaryLOCK(vt.thisFrameClock);
+    vtReduceCacheIfNecessaryLOCK(vt.thisFrameClock);
 
     if (!newPages.empty())
     {
@@ -78,7 +136,7 @@ void vtMapNewPages()
             const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
             const uint8_t mip = EXTRACT_MIP(pageInfo);
 
-            image_data = vtcRetrieveCachedPageLOCK(pageInfo);
+            image_data = vtRetrieveCachedPageLOCK(pageInfo);
 
             // find slot
             bool foundFree = false;
@@ -159,7 +217,7 @@ void vtMapNewPages()
                 glTexSubImage2D(GL_TEXTURE_2D, 0, x * vt.cfg.pageDimension, y * vt.cfg.pageDimension, vt.cfg.pageDimension, vt.cfg.pageDimension, vt.cfg.pageDataFormat, vt.cfg.pageDataType, image_data);
 
                 #if MIPPED_PHYSTEX
-                    uint32_t *mippedData = vtuDownsampleImageRGB((const uint32_t *)image_data);
+                    uint32_t *mippedData = vtDownsampleImageRGB((const uint32_t *)image_data);
                     glTexSubImage2D(GL_TEXTURE_2D, 1, x * (vt.cfg.pageDimension / 2), y * (vt.cfg.pageDimension / 2), (vt.cfg.pageDimension / 2), (vt.cfg.pageDimension / 2), vt.cfg.pageDataFormat, vt.cfg.pageDataType, mippedData);
                     free(mippedData);
                 #endif
@@ -295,22 +353,6 @@ void _unmapPageFallbackEntries(int m, int x_coord, int y_coord, int x_search, in
             _unmapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2, x_search, y_search, mip_repl, x_repl, y_repl);
             _unmapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2 + 1, x_search, y_search, mip_repl, x_repl, y_repl);
         }
-    }
-}
-
-void vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location)
-{
-    if (FALLBACK_ENTRIES)
-    {
-        const uint32_t pageEntry = PAGE_TABLE(mipmap_level + 1, x_coord / 2, y_coord / 2);
-        *((uint8_t *)&PAGE_TABLE(mipmap_level, x_coord, y_coord)) = kTableFree;
-        
-        _unmapPageFallbackEntries(mipmap_level, x_coord, y_coord, x_storage_location, y_storage_location, BYTE4(pageEntry), BYTE3(pageEntry), BYTE2(pageEntry));
-    }
-    else
-    {
-        PAGE_TABLE(mipmap_level, x_coord, y_coord) = kTableFree;
-        touchMipRow(mipmap_level, y_coord)
     }
 }
 

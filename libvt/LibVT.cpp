@@ -21,15 +21,15 @@ void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pag
     assert((HIGHEST_MIP_LEVELS_TO_KEEP >= 0) && (HIGHEST_MIP_LEVELS_TO_KEEP <= 5) && ((float)HIGHEST_MIP_LEVELS_TO_KEEP <= _mipChainLength));
     assert(!(READBACK_MODE_NONE && USE_PBO_READBACK));
 
-#if GL_ES_VERSION_2_0
-    assert(READBACK_MODE == kBackbufferReadPixels);
-    assert(ANISOTROPY == 0);
-    assert((VT_MIN_FILTER == GL_NEAREST) || (VT_MIN_FILTER == GL_LINEAR));
-    assert(USE_PBO_READBACK == 0);
-    assert(USE_PBO_PAGETABLE == 0);
-    assert(USE_PBO_PHYSTEX == 0);
-    assert(FALLBACK_ENTRIES == 1);
-#endif
+    #if GL_ES_VERSION_2_0
+        assert(READBACK_MODE == kBackbufferReadPixels);
+        assert(ANISOTROPY == 0);
+        assert((VT_MIN_FILTER == GL_NEAREST) || (VT_MIN_FILTER == GL_LINEAR));
+        assert(USE_PBO_READBACK == 0);
+        assert(USE_PBO_PAGETABLE == 0);
+        assert(USE_PBO_PHYSTEX == 0);
+        assert(FALLBACK_ENTRIES == 1);
+    #endif
     if (LONG_MIP_CHAIN && !USE_MIPCALC_TEXTURE) printf("Warning: expect artifacts when using LONG_MIP_CHAIN && !USE_MIPCALC_TEXTURE\n");
 
     // initialize and calculate configuration
@@ -77,110 +77,10 @@ void vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pag
     for (uint8_t i = 0; i < vt.cfg.mipChainLength; i++)
         vt.pageTables[i] = (uint32_t *)(pageTableBuffer + vt.pageTableMipOffsets[i]);
 
-    // check the tile store
-    char buf[255];
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        snprintf(buf, 255, "%s%stiles_b%u_level%u%stile_%u_0_0.%s", _tileDir, PATH_SEPERATOR, vt.cfg.pageBorder, i, PATH_SEPERATOR, i, vt.cfg.pageCodec.c_str());
-
-        if (vtuFileExists(buf) != (i < vt.cfg.mipChainLength))
-            vt_fatal("Error: %s doesn't seem to be a page store with MIP_CHAIN_LENGTH = %u, vt.cfg.pageCodec.c_str() = %s and vt.cfg.pageBorder = %u!", vt.cfg.tileDir.c_str(), vt.cfg.mipChainLength, vt.cfg.pageCodec.c_str(), vt.cfg.pageBorder);
-    }
-
-    // precache some pages
-    queue<uint32_t>    pagesToCache;
-    for (uint8_t i = vt.cfg.mipChainLength - HIGHEST_MIP_LEVELS_TO_PRECACHE; i < vt.cfg.mipChainLength; i++)
-        for (uint8_t x = 0; x < (vt.cfg.virtTexDimensionPages >> i); x++)
-            for (uint8_t y = 0; y < (vt.cfg.virtTexDimensionPages >> i); y++)
-                pagesToCache.push(MAKE_PAGE_INFO(i, x, y));
-    vtCachePages(pagesToCache);
-
-    // push the resident pages
-    for (uint8_t i = vt.cfg.mipChainLength - HIGHEST_MIP_LEVELS_TO_KEEP; i < vt.cfg.mipChainLength; i++)
-        for (uint8_t x = 0; x < (vt.cfg.virtTexDimensionPages >> i); x++)
-            for (uint8_t y = 0; y < (vt.cfg.virtTexDimensionPages >> i); y++)
-                vt.neededPages.push_back(MAKE_PAGE_INFO(i, x, y));
-
-    #if ENABLE_MT == 1
-        vt.loaderThread = std::thread(&vtLoadNeededPages);
-    #elif ENABLE_MT == 2
-        vt.loaderThread = std::thread(&vtLoadNeededPagesDecoupled);
-        vt.decompressorThread = std::thread(&vtDecompressNeededPagesDecoupled);
-    #endif
+    vtInitPageLoader(_tileDir);
 
     assert(vt.cfg.physTexDimensionPages <= MAX_PHYS_TEX_DIMENSION_PAGES);
     assert(!((MIPPED_PHYSTEX == 1) && (USE_PBO_PHYSTEX == 1))); // TODO: support these combinations
-}
-
-bool vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, uint8_t *_mipChainLength, uint32_t *_pageDimension)
-{
-    bool success = false;
-    DIR *dp;
-    struct dirent *ep;
-    string tilestring = string("");
-    string codec = string("    ");
-
-    *_mipChainLength = (uint8_t)0;
-
-    dp = opendir (_tileDir);
-    if (dp != NULL)
-    {
-        while ((ep = readdir(dp)))
-        {
-            int level, border;
-            string dir = string(ep->d_name);
-
-            if (dir.find("tiles_b", 0) != string::npos)
-            {
-                sscanf(ep->d_name, "tiles_b%d_level%d", &border, &level);
-
-                *_pageBorder = border;
-                if (tilestring == "") tilestring = string(ep->d_name);
-                if (++level > *_mipChainLength) *_mipChainLength = level;
-            }
-        }
-        closedir(dp);
-
-        dp = opendir (string(string(_tileDir) + string("/") + string (tilestring)).c_str());
-        if (dp != NULL)
-        {
-            while ((ep = readdir(dp)))
-            {
-                string file = string(ep->d_name);
-
-                if (file.find("tile_", 0) != string::npos)
-                {
-                    uint32_t len = (uint32_t) file.length();
-                    codec = file.substr(len - 4);
-                    if (codec[0] == '.') 
-                        codec = codec.substr(1);
-                    *_pageDimension = 0;
-                    void *image = vtuDecompressImageFile(string(string(_tileDir) + string("/") + string (tilestring) + string("/") + file).c_str(), _pageDimension);
-                    free(image);
-                    success = true;
-                    break;
-                }
-            }
-            closedir(dp);
-        }
-    }
-
-    _pageExtension[0] = codec[0];
-    _pageExtension[1] = codec[1];
-    _pageExtension[2] = codec[2];
-    _pageExtension[3] = codec[3];
-
-    return success;
-}
-
-void vtLoadShaders(GLuint* readbackShader, GLuint* renderVTShader)
-{
-    char* prelude = vtGetShaderPrelude();
-
-      *readbackShader = vtuLoadShadersWithPrelude(prelude, vtReadbackVertGLSL, vtReadbackFragGLSL);
-      *renderVTShader = vtuLoadShadersWithPrelude(prelude, vtRenderVertGLSL, vtRenderFragGLSL);
- 
-    free(prelude);
 }
 
 void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
@@ -312,18 +212,6 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
 #endif
 }
 
-char * vtGetShaderPrelude()
-{
-    setlocale( LC_ALL, "C" );
-
-    char *buf = (char *) calloc(1, 2048);
-    snprintf(buf, 2048,    vtShaderPreludeTemplate,
-                        (float)vt.cfg.physTexDimensionPages, (float)vt.cfg.pageDimension, log2f(vt.cfg.pageDimension), (float)PREPASS_RESOLUTION_REDUCTION_SHIFT,
-                        (float)vt.cfg.virtTexDimensionPages, (float)(vt.cfg.virtTexDimensionPages * vt.cfg.pageDimension), (float)vt.cfg.pageBorder, float(ANISOTROPY),
-                        USE_MIPCALC_TEXTURE, vt.cfg.pageBorder, MIPPED_PHYSTEX, FALLBACK_ENTRIES, ANISOTROPY, LONG_MIP_CHAIN, TEXUNIT_FOR_MIPCALC, TEXUNIT_FOR_PHYSTEX, TEXUNIT_FOR_PAGETABLE);
-    return buf;
-}
-
 void vtShutdown()
 {    
 #if ENABLE_MT
@@ -373,6 +261,26 @@ void vtShutdown()
             glDeleteFramebuffersEXT(1, &vt.fbo);
         }
     }
+}
+
+void vtPerspective(double m[4][4], double fovy, double aspect,    double zNear, double zFar)
+{
+    double sine, cotangent, deltaZ;
+    double radians = fovy / 2.0 * 3.14159265358979323846 / 180.0;
+
+    deltaZ = zFar - zNear;
+    sine = sin(radians);
+
+    if ((deltaZ == 0) || (sine == 0) || (aspect == 0))
+        vt_fatal("Error: perspectve matrix is degenerate");
+
+    cotangent = cos(radians) / sine;
+
+    m[0][0] = cotangent / aspect;
+    m[1][1] = cotangent;
+    m[2][2] = -(zFar + zNear) / deltaZ;
+    m[2][3] = -1.0;
+    m[3][2] = -2.0 * zNear * zFar / deltaZ;
 }
 
 void vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, const float nearPlane, const float farPlane)
@@ -434,7 +342,7 @@ void vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, c
     }
 
     if (PREPASS_RESOLUTION_REDUCTION_SHIFT && fovInDegrees > 0.0)
-        vtuPerspective(vt.projectionMatrix, fovInDegrees, (float)vt.w / (float)vt.h, nearPlane, farPlane);
+        vtPerspective(vt.projectionMatrix, fovInDegrees, (float)vt.w / (float)vt.h, nearPlane, farPlane);
 }
 
 float vtGetBias()
@@ -444,3 +352,4 @@ float vtGetBias()
     else
         return vt.bias;
 }
+

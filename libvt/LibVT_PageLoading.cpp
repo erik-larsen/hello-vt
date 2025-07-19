@@ -3,7 +3,7 @@
 
 // TODO: Consolidate duplicate code blocks below
 
-char vtuFileExists(char *path)
+char vtFileExists(char *path)
 {
     FILE *f;
 
@@ -20,7 +20,7 @@ char vtuFileExists(char *path)
     }
 }
 
-void * vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_size)
+void * vtLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_size)
 {
     uint32_t fs = 0;
     uint32_t *fsp = &fs;
@@ -65,29 +65,7 @@ void * vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_s
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-void * vtuDecompressImageFile(const char *imagePath, uint32_t *pic_size)
-{
-    #if DEBUG_LOG > 0
-        printf("Thread %llu: Load & decompress image file: %s\n", THREAD_ID, imagePath);
-    #endif
-
-    // Load the raw file data into a buffer first
-    uint32_t file_size = 0;
-    void *file_data = vtuLoadFile(imagePath, 0, &file_size);
-    if (file_data && file_size > 0) 
-    {
-        // Now decompress from that buffer
-        void *image_data = vtuDecompressImageBuffer(file_data, file_size, pic_size);
-
-        // Free the intermediate compressed buffer
-        free(file_data);
-        return image_data;
-    }
-    else
-        return NULL;
-}
-
-void * vtuDecompressImageBuffer(const void *file_data, uint32_t file_size, uint32_t *pic_size)
+void * vtDecompressImageBuffer(const void *file_data, uint32_t file_size, uint32_t *pic_size)
 {
     #if DEBUG_LOG > 0
         printf("Thread %llu: Decompress image in-memory: %p\n", THREAD_ID, file_data);
@@ -105,6 +83,28 @@ void * vtuDecompressImageBuffer(const void *file_data, uint32_t file_size, uint3
         assert(((uint32_t)width == *pic_size) && ((uint32_t)height == *pic_size));
 
     return image_data;
+}
+
+void * vtDecompressImageFile(const char *imagePath, uint32_t *pic_size)
+{
+    #if DEBUG_LOG > 0
+        printf("Thread %llu: Load & decompress image file: %s\n", THREAD_ID, imagePath);
+    #endif
+
+    // Load the raw file data into a buffer first
+    uint32_t file_size = 0;
+    void *file_data = vtLoadFile(imagePath, 0, &file_size);
+    if (file_data && file_size > 0) 
+    {
+        // Now decompress from that buffer
+        void *image_data = vtDecompressImageBuffer(file_data, file_size, pic_size);
+
+        // Free the intermediate compressed buffer
+        free(file_data);
+        return image_data;
+    }
+    else
+        return NULL;
 }
 
 #if ENABLE_MT < 2
@@ -146,7 +146,7 @@ void vtLoadNeededPages()
             const uint8_t mip = EXTRACT_MIP(pageInfo);
 
             // load tile from cache or harddrive
-            if (!vtcIsPageInCacheLOCK(pageInfo))
+            if (!vtIsPageInCacheLOCK(pageInfo))
             {
                 snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", vt.cfg.tileDir.c_str(), PATH_SEPERATOR, vt.cfg.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, y_coord, vt.cfg.pageCodec.c_str());
 
@@ -154,9 +154,9 @@ void vtLoadNeededPages()
                     printf("Thread %llu: Loading and decompressing page from disk: mip:%u %u/%u\n", THREAD_ID, mip, x_coord, y_coord);
                 #endif
 
-                void *image_data = vtuDecompressImageFile(imagePath, &vt.cfg.pageDimension);
+                void *image_data = vtDecompressImageFile(imagePath, &vt.cfg.pageDimension);
 
-                vtcInsertPageIntoCacheLOCK(pageInfo, image_data);
+                vtInsertPageIntoCacheLOCK(pageInfo, image_data);
             }
 
             // usleep(500000); // for testin' what happens when pages are loaded slowly
@@ -202,7 +202,7 @@ void vtLoadNeededPagesDecoupled()
             const uint8_t mip = EXTRACT_MIP(pageInfo);
 
             // load tile from cache or harddrive
-            if (!vtcIsPageInCacheLOCK(pageInfo))
+            if (!vtIsPageInCacheLOCK(pageInfo))
             {
                 snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", vt.cfg.tileDir.c_str(), PATH_SEPERATOR, vt.cfg.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, y_coord, vt.cfg.pageCodec.c_str());
 
@@ -211,7 +211,7 @@ void vtLoadNeededPagesDecoupled()
                 #endif
 
                 uint32_t file_size = 0;
-                void *file_data = vtuLoadFile(imagePath, 0, &file_size);
+                void *file_data = vtLoadFile(imagePath, 0, &file_size);
                 if (file_data && file_size > 0)
                 {    // lock
                     LOCK(vt.compressedMutex)
@@ -274,10 +274,10 @@ void vtDecompressNeededPagesDecoupled()
                     printf("Thread %llu: Decompressing page from buffer: Mip:%u %u/%u (%i)\n", THREAD_ID, mip, x_coord, y_coord, pageInfo);
                 #endif
 
-                void *image_data = vtuDecompressImageBuffer(file_data, size, &vt.cfg.pageDimension);
+                void *image_data = vtDecompressImageBuffer(file_data, size, &vt.cfg.pageDimension);
 
                 free(file_data);
-                vtcInsertPageIntoCacheLOCK(pageInfo, image_data);
+                vtInsertPageIntoCacheLOCK(pageInfo, image_data);
 
                 {    // lock
                     LOCK(vt.newPagesMutex)
@@ -300,7 +300,7 @@ void vtCachePages(queue<uint32_t> pagesToCache)
         const uint8_t mip = EXTRACT_MIP(pageInfo);
 
         // load tile from cache or harddrive
-        if (!vtcIsPageInCacheLOCK(pageInfo))
+        if (!vtIsPageInCacheLOCK(pageInfo))
         {
             // convert from lower left coordinates (opengl) to top left (tile store on disk)
             snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", 
@@ -310,9 +310,104 @@ void vtCachePages(queue<uint32_t> pagesToCache)
                 printf("Thread %llu: Caching page from disk: Mip:%u %u/%u\n", THREAD_ID, mip, x_coord, y_coord);
             #endif
 
-            void *image_data = vtuDecompressImageFile(imagePath, &vt.cfg.pageDimension);
+            void *image_data = vtDecompressImageFile(imagePath, &vt.cfg.pageDimension);
 
-            vtcInsertPageIntoCacheLOCK(pageInfo, image_data);
+            vtInsertPageIntoCacheLOCK(pageInfo, image_data);
         }
     }
+}
+
+void vtInitPageLoader(const char *_tileDir)
+{
+    // check the tile store
+    char buf[255];
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        snprintf(buf, 255, "%s%stiles_b%u_level%u%stile_%u_0_0.%s", _tileDir, PATH_SEPERATOR, vt.cfg.pageBorder, i, PATH_SEPERATOR, i, vt.cfg.pageCodec.c_str());
+
+        if (vtFileExists(buf) != (i < vt.cfg.mipChainLength))
+            vt_fatal("Error: %s doesn't seem to be a page store with MIP_CHAIN_LENGTH = %u, vt.cfg.pageCodec.c_str() = %s and vt.cfg.pageBorder = %u!", vt.cfg.tileDir.c_str(), vt.cfg.mipChainLength, vt.cfg.pageCodec.c_str(), vt.cfg.pageBorder);
+    }
+
+    // precache some pages
+    queue<uint32_t>    pagesToCache;
+    for (uint8_t i = vt.cfg.mipChainLength - HIGHEST_MIP_LEVELS_TO_PRECACHE; i < vt.cfg.mipChainLength; i++)
+        for (uint8_t x = 0; x < (vt.cfg.virtTexDimensionPages >> i); x++)
+            for (uint8_t y = 0; y < (vt.cfg.virtTexDimensionPages >> i); y++)
+                pagesToCache.push(MAKE_PAGE_INFO(i, x, y));
+    vtCachePages(pagesToCache);
+
+    // push the resident pages
+    for (uint8_t i = vt.cfg.mipChainLength - HIGHEST_MIP_LEVELS_TO_KEEP; i < vt.cfg.mipChainLength; i++)
+        for (uint8_t x = 0; x < (vt.cfg.virtTexDimensionPages >> i); x++)
+            for (uint8_t y = 0; y < (vt.cfg.virtTexDimensionPages >> i); y++)
+                vt.neededPages.push_back(MAKE_PAGE_INFO(i, x, y));
+
+    #if ENABLE_MT == 1
+        vt.loaderThread = std::thread(&vtLoadNeededPages);
+    #elif ENABLE_MT == 2
+        vt.loaderThread = std::thread(&vtLoadNeededPagesDecoupled);
+        vt.decompressorThread = std::thread(&vtDecompressNeededPagesDecoupled);
+    #endif
+}
+
+bool vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, uint8_t *_mipChainLength, uint32_t *_pageDimension)
+{
+    bool success = false;
+    DIR *dp;
+    struct dirent *ep;
+    string tilestring = string("");
+    string codec = string("    ");
+
+    *_mipChainLength = (uint8_t)0;
+
+    dp = opendir (_tileDir);
+    if (dp != NULL)
+    {
+        while ((ep = readdir(dp)))
+        {
+            int level, border;
+            string dir = string(ep->d_name);
+
+            if (dir.find("tiles_b", 0) != string::npos)
+            {
+                sscanf(ep->d_name, "tiles_b%d_level%d", &border, &level);
+
+                *_pageBorder = border;
+                if (tilestring == "") tilestring = string(ep->d_name);
+                if (++level > *_mipChainLength) *_mipChainLength = level;
+            }
+        }
+        closedir(dp);
+
+        dp = opendir (string(string(_tileDir) + string("/") + string (tilestring)).c_str());
+        if (dp != NULL)
+        {
+            while ((ep = readdir(dp)))
+            {
+                string file = string(ep->d_name);
+
+                if (file.find("tile_", 0) != string::npos)
+                {
+                    uint32_t len = (uint32_t) file.length();
+                    codec = file.substr(len - 4);
+                    if (codec[0] == '.') 
+                        codec = codec.substr(1);
+                    *_pageDimension = 0;
+                    void *image = vtDecompressImageFile(string(string(_tileDir) + string("/") + string (tilestring) + string("/") + file).c_str(), _pageDimension);
+                    free(image);
+                    success = true;
+                    break;
+                }
+            }
+            closedir(dp);
+        }
+    }
+
+    _pageExtension[0] = codec[0];
+    _pageExtension[1] = codec[1];
+    _pageExtension[2] = codec[2];
+    _pageExtension[3] = codec[3];
+
+    return success;
 }

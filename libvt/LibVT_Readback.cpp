@@ -147,7 +147,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
                     // setting just the lowest byte matters for the fallback-entry-mode, else a non-mapped page is empty anyway
                     *((uint8_t *)&PAGE_TABLE(mip, x_coord, y_coord)) = kTableMappingInProgress;
 
-                    vtcTouchCachedPage(pageInfo);
+                    vtTouchCachedPage(pageInfo);
 
                     vt.necessaryPageCount++;
                 }
@@ -161,7 +161,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
                     {
                         vt.textureStorageInfo[xInTexture][yInTexture].clockUsed = clocks;    // touch page in physical texture
 
-                        vtcTouchCachedPage(MAKE_PAGE_INFO(mip, x_coord, y_coord));            // touch page in RAM cache
+                        vtTouchCachedPage(MAKE_PAGE_INFO(mip, x_coord, y_coord));            // touch page in RAM cache
 
                         vt.necessaryPageCount++;
                     }
@@ -211,7 +211,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
     queue<uint32_t>    cachedPages;
     queue<uint32_t>    nonCachedPages;
 
-    vtcSplitPagelistIntoCachedAndNoncachedLOCK(&tmpPages, &cachedPages, &nonCachedPages);
+    vtSplitPagelistIntoCachedAndNoncachedLOCK(&tmpPages, &cachedPages, &nonCachedPages);
 
     {    // lock
         LOCK(vt.neededPagesMutex)

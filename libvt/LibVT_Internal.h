@@ -179,30 +179,14 @@ struct vtData
 
 extern vtData vt;
 
+// LibVT_PageLoading.cpp
+void        vtInitPageLoader(const char *_tileDir);
 void        vtLoadNeededPages();
-void        vtLoadNeededPagesDecoupled();
-void        vtDecompressNeededPagesDecoupled();
-void        vtCachePages(queue<uint32_t> pagesToCache);
 
-void        vtcRemoveCachedPageLOCK(uint32_t pageInfo);
-void        vtcTouchCachedPage(uint32_t pageInfo);
-void        vtcSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32_t> *cached, queue<uint32_t> *nonCached);
-bool        vtcIsPageInCacheLOCK(uint32_t pageInfo);
-void        vtcInsertPageIntoCacheLOCK(uint32_t pageInfo, void * image_data);
-void *      vtcRetrieveCachedPageLOCK(uint32_t pageInfo);
-void        vtcReduceCacheIfNecessaryLOCK(clock_t currentTime);
-void        _vtcRemoveCachedPage(uint32_t pageInfo);
-
-void        vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location);
-
-char        vtuFileExists(char *path);
-void *      vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_size);
-uint32_t *  vtuDownsampleImageRGB(const uint32_t *tex);
-void        vtuPerspective(double m[4][4], double fovy, double aspect, double zNear, double zFar);
-
-void *      vtuDecompressImageFile(const char *imagePath, uint32_t *pic_size);
-void *      vtuDecompressImageBuffer(const void *file_data, uint32_t file_size, uint32_t *pic_size);
-
-#include "LibVT_Shaders.h"
-GLuint      vtuCompileShaderWithPrelude(const char* prelude, const char* shaderSrc, GLenum type);
-GLuint      vtuLoadShadersWithPrelude(const char* prelude, const char* vertSrc, const char* fragSrc);
+// LibVT_PageCache.cpp
+void        vtTouchCachedPage(uint32_t pageInfo);
+void        vtSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32_t> *cached, queue<uint32_t> *nonCached);
+bool        vtIsPageInCacheLOCK(uint32_t pageInfo);
+void        vtInsertPageIntoCacheLOCK(uint32_t pageInfo, void * image_data);
+void *      vtRetrieveCachedPageLOCK(uint32_t pageInfo);
+void        vtReduceCacheIfNecessaryLOCK(clock_t currentTime);

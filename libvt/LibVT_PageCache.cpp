@@ -1,18 +1,26 @@
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
-void vtcRemoveCachedPageLOCK(uint32_t pageInfo)
+void vtRemoveCachedPage(uint32_t pageInfo)
 {
-    LOCK(vt.cachedPagesMutex)
-    return _vtcRemoveCachedPage(pageInfo);
+    void *data = vt.cachedPages[pageInfo];
+    free(data);
+    vt.cachedPages.erase(pageInfo);
+    vt.cachedPagesAccessTimes.erase(pageInfo);
 }
 
-void vtcTouchCachedPage(uint32_t pageInfo)
+void vtRemoveCachedPageLOCK(uint32_t pageInfo)
+{
+    LOCK(vt.cachedPagesMutex)
+    return vtRemoveCachedPage(pageInfo);
+}
+
+void vtTouchCachedPage(uint32_t pageInfo)
 {
     vt.cachedPagesAccessTimes[pageInfo] = vt.thisFrameClock;
 }
 
-void vtcSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32_t> *cached, queue<uint32_t> *nonCached)
+void vtSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32_t> *cached, queue<uint32_t> *nonCached)
 {
     LOCK(vt.cachedPagesMutex)
 
@@ -29,26 +37,26 @@ void vtcSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32
     }
 }
 
-bool vtcIsPageInCacheLOCK(uint32_t pageInfo)
+bool vtIsPageInCacheLOCK(uint32_t pageInfo)
 {
     LOCK(vt.cachedPagesMutex)
     return (vt.cachedPages.count(pageInfo) > 0);
 }
 
-void vtcInsertPageIntoCacheLOCK(uint32_t pageInfo, void * image_data)
+void vtInsertPageIntoCacheLOCK(uint32_t pageInfo, void * image_data)
 {
     LOCK(vt.cachedPagesMutex)
     vt.cachedPages.insert(pair<uint32_t, void *>(pageInfo, image_data));
 }
 
-void * vtcRetrieveCachedPageLOCK(uint32_t pageInfo)
+void * vtRetrieveCachedPageLOCK(uint32_t pageInfo)
 {
     LOCK(vt.cachedPagesMutex)
     assert(vt.cachedPages.count(pageInfo));
     return vt.cachedPages.find(pageInfo)->second;
 }
 
-void vtcReduceCacheIfNecessaryLOCK(clock_t currentTime)
+void vtReduceCacheIfNecessaryLOCK(clock_t currentTime)
 {
     LOCK(vt.cachedPagesMutex)
 
@@ -84,19 +92,11 @@ void vtcReduceCacheIfNecessaryLOCK(clock_t currentTime)
         for (oldestIter = oldestPages.begin(); oldestIter != oldestPages.end(); ++oldestIter)
         {
             uint32_t pageInfo = oldestIter->second;
-            _vtcRemoveCachedPage(pageInfo);
+            vtRemoveCachedPage(pageInfo);
 
             #if DEBUG_LOG > 1
                 printf("Thread %llu: Un-loading page from RAM-cache: Mip:%u %u/%u\n", THREAD_ID, EXTRACT_MIP(pageInfo), EXTRACT_X(pageInfo), EXTRACT_Y(pageInfo));
             #endif
         }
     }
-}
-
-void _vtcRemoveCachedPage(uint32_t pageInfo)
-{
-    void *data = vt.cachedPages[pageInfo];
-    free(data);
-    vt.cachedPages.erase(pageInfo);
-    vt.cachedPagesAccessTimes.erase(pageInfo);
 }
