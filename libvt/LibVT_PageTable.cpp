@@ -72,7 +72,7 @@ void vtMapNewPages()
 #endif
         glActiveTexture(GL_TEXTURE0 + TEXUNIT_FOR_PHYSTEX);
 
-        while(!newPages.empty() && foundSlot)
+        while (!newPages.empty() && foundSlot)
         {
             const uint32_t pageInfo = newPages.front();newPages.pop();
             const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);

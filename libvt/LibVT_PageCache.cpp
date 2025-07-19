@@ -16,7 +16,7 @@ void vtcSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32
 {
     LOCK(vt.cachedPagesMutex)
 
-    while(!s->empty())
+    while (!s->empty())
     {
         uint32_t page = s->front();
 
@@ -68,7 +68,7 @@ void vtcReduceCacheIfNecessaryLOCK(clock_t currentTime)
             oldestPages.insert(pair<clock_t, uint32_t>(currentTime+1+i, i));
 
         map<uint32_t, clock_t>::iterator cachedIter;
-        for(cachedIter = vt.cachedPagesAccessTimes.begin(); cachedIter != vt.cachedPagesAccessTimes.end(); ++cachedIter)
+        for (cachedIter = vt.cachedPagesAccessTimes.begin(); cachedIter != vt.cachedPagesAccessTimes.end(); ++cachedIter)
         {
             if (cachedIter->second < oldestPages.rbegin()->first)
             {
@@ -81,7 +81,7 @@ void vtcReduceCacheIfNecessaryLOCK(clock_t currentTime)
         assert(oldestPages.size() == pagesToErase);
 
         multimap<clock_t, uint32_t>::iterator oldestIter;
-        for(oldestIter = oldestPages.begin(); oldestIter != oldestPages.end(); ++oldestIter)
+        for (oldestIter = oldestPages.begin(); oldestIter != oldestPages.end(); ++oldestIter)
         {
             uint32_t pageInfo = oldestIter->second;
             _vtcRemoveCachedPage(pageInfo);

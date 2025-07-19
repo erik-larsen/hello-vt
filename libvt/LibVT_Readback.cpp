@@ -192,12 +192,12 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
     multimap<uint16_t, uint32_t>::reverse_iterator tmpPagesIter2;
     
 ///*1*/    printf("NEWFRAME\n\n");
-///*1*/    for(tmpPagesIter1 = bla.begin(); tmpPagesIter1 != bla.end(); ++tmpPagesIter1)
+///*1*/    for (tmpPagesIter1 = bla.begin(); tmpPagesIter1 != bla.end(); ++tmpPagesIter1)
 ///*1*/    printf("PAGE: %i %i\n", tmpPagesIter1->first, tmpPagesIter1->second);
 
-    for(tmpPagesIter1 = tmpPages1.begin(); tmpPagesIter1 != tmpPages1.end(); ++tmpPagesIter1) // pages sorting by importance
+    for (tmpPagesIter1 = tmpPages1.begin(); tmpPagesIter1 != tmpPages1.end(); ++tmpPagesIter1) // pages sorting by importance
         tmpPages2.insert(pair<uint16_t, uint32_t>(tmpPagesIter1->second, tmpPagesIter1->first));
-    for(tmpPagesIter2 = tmpPages2.rbegin(); tmpPagesIter2 != tmpPages2.rend(); ++tmpPagesIter2)
+    for (tmpPagesIter2 = tmpPages2.rbegin(); tmpPagesIter2 != tmpPages2.rend(); ++tmpPagesIter2)
         tmpPages.push(tmpPagesIter2->second);
 
 #if !GL_ES_VERSION_2_0
@@ -220,7 +220,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 
         if (!nonCachedPages.empty())
         {
-            while(!nonCachedPages.empty())
+            while (!nonCachedPages.empty())
             {
                 const uint32_t pageInfo = nonCachedPages.front();
 
@@ -243,7 +243,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
     {    // lock
         LOCK(vt.newPagesMutex)
 
-        while(!cachedPages.empty())
+        while (!cachedPages.empty())
         {
             const uint32_t pageInfo = cachedPages.front();
 

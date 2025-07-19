@@ -131,7 +131,7 @@ void vtLoadNeededPages()
             #endif
 
             uint8_t i = 0;    
-            while(!vt.neededPages.empty() && i < limit) // TODO: all this copying could use preallocation of necessary space (not only here)
+            while (!vt.neededPages.empty() && i < limit) // TODO: all this copying could use preallocation of necessary space (not only here)
             {
                 neededPages.push(vt.neededPages.front());
                 vt.neededPages.pop_front();
@@ -139,7 +139,7 @@ void vtLoadNeededPages()
             }
         }    // unlock
 
-        while(!neededPages.empty())
+        while (!neededPages.empty())
         {
             const uint32_t pageInfo = neededPages.front();neededPages.pop();
             const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
@@ -187,7 +187,7 @@ void vtLoadNeededPagesDecoupled()
             }
 
             uint8_t i = 0;    // limit to 5 pages at once
-            while(!vt.neededPages.empty() && i < limit)
+            while (!vt.neededPages.empty() && i < limit)
             {
                 neededPages.push(vt.neededPages.front());
                 vt.neededPages.pop_front();
@@ -195,7 +195,7 @@ void vtLoadNeededPagesDecoupled()
             }
         }    // unlock
 
-        while(!neededPages.empty())
+        while (!neededPages.empty())
         {
             const uint32_t pageInfo = neededPages.front();neededPages.pop();
             const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
@@ -243,14 +243,14 @@ void vtDecompressNeededPagesDecoupled()
                 break;
 
             uint8_t i = 0;    // limit to 5 pages at once
-            while(!vt.newCompressedPages.empty() && i < limit)
+            while (!vt.newCompressedPages.empty() && i < limit)
             {
                 neededPages.push(vt.newCompressedPages.front());vt.newCompressedPages.pop();
                 i ++;
             }
         }    // unlock
 
-        while(!neededPages.empty())
+        while (!neededPages.empty())
         {
             const uint32_t pageInfo = neededPages.front();neededPages.pop();
             void *file_data;
@@ -293,7 +293,7 @@ void vtCachePages(queue<uint32_t> pagesToCache)
 {
     char imagePath[255];
 
-    while(!pagesToCache.empty())
+    while (!pagesToCache.empty())
     {
         const uint32_t pageInfo = pagesToCache.front();pagesToCache.pop();
         const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
