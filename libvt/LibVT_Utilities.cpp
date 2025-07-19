@@ -1,43 +1,41 @@
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
-extern vtConfig c;
-
 uint32_t * vtuDownsampleImageRGB(const uint32_t *_tex)
 {
     uint8_t *tex = (uint8_t *) _tex;
-    uint8_t *smallTex = (uint8_t *)malloc((c.pageDimension * c.pageDimension * 3) / 4);
+    uint8_t *smallTex = (uint8_t *)malloc((vt.cfg.pageDimension * vt.cfg.pageDimension * 3) / 4);
     assert(smallTex);
 
-    for (uint16_t x = 0; x < c.pageDimension / 2; x++)
+    for (uint16_t x = 0; x < vt.cfg.pageDimension / 2; x++)
     {
-        for (uint16_t y = 0; y < c.pageDimension / 2; y++)
+        for (uint16_t y = 0; y < vt.cfg.pageDimension / 2; y++)
         {
 #ifdef COLOR_CODE_MIPPED_PHYSTEX
-            smallTex[y * (c.pageDimension / 2) * 3 + (x*3)] = 200;
-            smallTex[y * (c.pageDimension / 2) * 3 + (x*3) + 1] = 10;
-            smallTex[y * (c.pageDimension / 2) * 3 + (x*3) + 2] = 70;
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3)] = 200;
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3) + 1] = 10;
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3) + 2] = 70;
 #else
-            uint8_t pix1 = tex[(y*2) * c.pageDimension * 3 + (x*2*3)];
-            uint8_t pix2 = tex[(y*2+1) * c.pageDimension * 3 + (x*2*3)];
-            uint8_t pix3 = tex[(y*2) * c.pageDimension * 3 + (x*2*3+3)];
-            uint8_t pix4 = tex[(y*2+1) * c.pageDimension * 3 + (x*2*3+3)];
+            uint8_t pix1 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3)];
+            uint8_t pix2 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3)];
+            uint8_t pix3 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3+3)];
+            uint8_t pix4 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3+3)];
 
-            smallTex[y * (c.pageDimension / 2) * 3 + (x*3)] = (pix1 + pix2 + pix3 + pix4) / 4;
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3)] = (pix1 + pix2 + pix3 + pix4) / 4;
 
-            pix1 = tex[(y*2) * c.pageDimension * 3 + (x*2*3) + 1];
-            pix2 = tex[(y*2+1) * c.pageDimension * 3 + (x*2*3) + 1];
-            pix3 = tex[(y*2) * c.pageDimension * 3 + (x*2*3+3) + 1];
-            pix4 = tex[(y*2+1) * c.pageDimension * 3 + (x*2*3+3) + 1];
+            pix1 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3) + 1];
+            pix2 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3) + 1];
+            pix3 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3+3) + 1];
+            pix4 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3+3) + 1];
 
-            smallTex[y * (c.pageDimension / 2) * 3 + (x*3) + 1] = (pix1 + pix2 + pix3 + pix4) / 4;
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3) + 1] = (pix1 + pix2 + pix3 + pix4) / 4;
 
-            pix1 = tex[(y*2) * c.pageDimension * 3 + (x*2*3) + 2];
-            pix2 = tex[(y*2+1) * c.pageDimension * 3 + (x*2*3) + 2];
-            pix3 = tex[(y*2) * c.pageDimension * 3 + (x*2*3+3) + 2];
-            pix4 = tex[(y*2+1) * c.pageDimension * 3 + (x*2*3+3) + 2];
+            pix1 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3) + 2];
+            pix2 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3) + 2];
+            pix3 = tex[(y*2) * vt.cfg.pageDimension * 3 + (x*2*3+3) + 2];
+            pix4 = tex[(y*2+1) * vt.cfg.pageDimension * 3 + (x*2*3+3) + 2];
 
-            smallTex[y * (c.pageDimension / 2) * 3 + (x*3) + 2] = (pix1 + pix2 + pix3 + pix4) / 4;
+            smallTex[y * (vt.cfg.pageDimension / 2) * 3 + (x*3) + 2] = (pix1 + pix2 + pix3 + pix4) / 4;
 #endif
         }
     }

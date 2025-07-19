@@ -9,9 +9,6 @@
                 "${workspaceFolder}/deps/source",
                 "${workspaceFolder}/deps/include/OpenGLES"
             ],
-            "defines": [
-                "TARGET_GLES"
-            ],
             "macFrameworkPath": [
                 "/Library/Frameworks"
             ],
@@ -27,9 +24,6 @@
                 "${workspaceFolder}/deps/include",
                 "${workspaceFolder}/deps/source",
                 "${workspaceFolder}/deps/include/OpenGLES"
-            ],
-            "defines": [
-                "TARGET_GLES"
             ],
             "compilerPath": "C:/Program Files/LLVM/bin/clang++.exe",
             "cStandard": "c11",

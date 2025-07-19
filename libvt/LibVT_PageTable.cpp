@@ -1,9 +1,6 @@
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
-extern vtData vt;
-extern vtConfig c;
-
 void _mapPageFallbackEntries(int m, int x_coord, int y_coord, int mip, int x, int y);
 void _unmapPageFallbackEntries(int m, int x_coord, int y_coord, int x_search, int y_search, int mip_repl, int x_repl, int y_repl);
 
@@ -49,15 +46,15 @@ void vtMapNewPages()
         bool foundSlot = true;
         const void *image_data;
 
-        for (uint8_t i = 0; i < c.mipChainLength; i++)
+        for (uint8_t i = 0; i < vt.cfg.mipChainLength; i++)
         {
 #ifdef DEBUG_ERASE_CACHED_PAGES_EVERY_FRAME
             vt.mipLevelTouched[i] = true;
             vt.mipLevelMinrow[i] = 0;
-            vt.mipLevelMaxrow[i] = (c.virtTexDimensionPages >> i) - 1;
+            vt.mipLevelMaxrow[i] = (vt.cfg.virtTexDimensionPages >> i) - 1;
 #else
             vt.mipLevelTouched[i] = false;
-            vt.mipLevelMinrow[i] = (uint16_t) c.virtTexDimensionPages >> i;
+            vt.mipLevelMinrow[i] = (uint16_t) vt.cfg.virtTexDimensionPages >> i;
             vt.mipLevelMaxrow[i] = 0;
 #endif
         }
@@ -68,7 +65,7 @@ void vtMapNewPages()
         uint8_t newPageCount = 0;
 
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, vt.pboPhystex);
-        glBufferData(GL_PIXEL_UNPACK_BUFFER, c.pageMemsize * PBO_PHYSTEX_PAGES, 0, GL_STREAM_DRAW);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, vt.cfg.pageMemsize * PBO_PHYSTEX_PAGES, 0, GL_STREAM_DRAW);
 
         uint8_t *phys_buffer = (uint8_t *)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
         assert(phys_buffer);
@@ -90,11 +87,11 @@ void vtMapNewPages()
 
             // find least recently used or free page
             foundSlot = false;
-            for (x = 0; x < c.physTexDimensionPages; x++)
+            for (x = 0; x < vt.cfg.physTexDimensionPages; x++)
             {
-                for (y = 0; y < c.physTexDimensionPages; y++)
+                for (y = 0; y < vt.cfg.physTexDimensionPages; y++)
                 {
-                    if ((vt.textureStorageInfo[x][y].clockUsed < lowestClock) && (vt.textureStorageInfo[x][y].mip < c.mipChainLength - HIGHEST_MIP_LEVELS_TO_KEEP))
+                    if ((vt.textureStorageInfo[x][y].clockUsed < lowestClock) && (vt.textureStorageInfo[x][y].mip < vt.cfg.mipChainLength - HIGHEST_MIP_LEVELS_TO_KEEP))
                     {
                         lowestClock = vt.textureStorageInfo[x][y].clockUsed;
                         storedX = x;
@@ -128,7 +125,7 @@ void vtMapNewPages()
                     vtUnmapPage(vt.textureStorageInfo[x][y].mip, vt.textureStorageInfo[x][y].x, vt.textureStorageInfo[x][y].y, x, y); // dont need complete version cause we map a new page at the same location
                 }
 
-                assert((x < c.physTexDimensionPages) && (y < c.physTexDimensionPages));
+                assert((x < vt.cfg.physTexDimensionPages) && (y < vt.cfg.physTexDimensionPages));
 
                 // map page
                 //vt.textureStorageInfo[x][y].active = true;
@@ -153,17 +150,17 @@ void vtMapNewPages()
                 }
 
 #if USE_PBO_PHYSTEX
-                memcpy(phys_buffer + c.pageMemsize * newPageCount, image_data, c.pageMemsize);
+                memcpy(phys_buffer + vt.cfg.pageMemsize * newPageCount, image_data, vt.cfg.pageMemsize);
                 xCoordinatesForPageMapping[newPageCount] = x;
                 yCoordinatesForPageMapping[newPageCount] = y;
 
                 newPageCount ++;
 #else
-                glTexSubImage2D(GL_TEXTURE_2D, 0, x * c.pageDimension, y * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDataFormat, c.pageDataType, image_data);
+                glTexSubImage2D(GL_TEXTURE_2D, 0, x * vt.cfg.pageDimension, y * vt.cfg.pageDimension, vt.cfg.pageDimension, vt.cfg.pageDimension, vt.cfg.pageDataFormat, vt.cfg.pageDataType, image_data);
 
                 #if MIPPED_PHYSTEX
                     uint32_t *mippedData = vtuDownsampleImageRGB((const uint32_t *)image_data);
-                    glTexSubImage2D(GL_TEXTURE_2D, 1, x * (c.pageDimension / 2), y * (c.pageDimension / 2), (c.pageDimension / 2), (c.pageDimension / 2), c.pageDataFormat, c.pageDataType, mippedData);
+                    glTexSubImage2D(GL_TEXTURE_2D, 1, x * (vt.cfg.pageDimension / 2), y * (vt.cfg.pageDimension / 2), (vt.cfg.pageDimension / 2), (vt.cfg.pageDimension / 2), vt.cfg.pageDataFormat, vt.cfg.pageDataType, mippedData);
                     free(mippedData);
                 #endif
                 #if DEBUG_LOG > 0
@@ -175,7 +172,7 @@ void vtMapNewPages()
             {    // lock
                 LOCK(vt.newPagesMutex)
 
-                printf("WARNING: skipping page loading because there are no free slots %i %i \n", vt.necessaryPageCount, c.physTexDimensionPages * c.physTexDimensionPages);
+                printf("WARNING: skipping page loading because there are no free slots %i %i \n", vt.necessaryPageCount, vt.cfg.physTexDimensionPages * vt.cfg.physTexDimensionPages);
                 vt.newPages.push(pageInfo);
                 while (!newPages.empty())
                 {
@@ -189,7 +186,7 @@ void vtMapNewPages()
 
         for (uint8_t i = 0; i < newPageCount; i++)
         {
-            glTexSubImage2D(GL_TEXTURE_2D, 0, xCoordinatesForPageMapping[i] * c.pageDimension, yCoordinatesForPageMapping[i] * c.pageDimension, c.pageDimension, c.pageDimension, c.pageDataFormat, c.pageDataType,  (uint8_t *) NULL + (i * c.pageMemsize));
+            glTexSubImage2D(GL_TEXTURE_2D, 0, xCoordinatesForPageMapping[i] * vt.cfg.pageDimension, yCoordinatesForPageMapping[i] * vt.cfg.pageDimension, vt.cfg.pageDimension, vt.cfg.pageDimension, vt.cfg.pageDataFormat, vt.cfg.pageDataType,  (uint8_t *) NULL + (i * vt.cfg.pageMemsize));
         }
 
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -199,23 +196,23 @@ void vtMapNewPages()
 
 #if USE_PBO_PAGETABLE
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, vt.pboPagetable);
-        glBufferData(GL_PIXEL_UNPACK_BUFFER, (vt.pageTableMipOffsets[c.mipChainLength - 1] + 1) * 4, 0, GL_STREAM_DRAW);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, (vt.pageTableMipOffsets[vt.cfg.mipChainLength - 1] + 1) * 4, 0, GL_STREAM_DRAW);
 
         uint32_t *table_buffer = (uint32_t *)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
         assert(table_buffer);
-        memcpy(table_buffer, vt.pageTables[0], (vt.pageTableMipOffsets[c.mipChainLength - 1] + 1) * 4);
+        memcpy(table_buffer, vt.pageTables[0], (vt.pageTableMipOffsets[vt.cfg.mipChainLength - 1] + 1) * 4);
         glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 #endif
 
         // done, upload pageTable
-        for (uint8_t i = 0; i < c.mipChainLength; i++)
+        for (uint8_t i = 0; i < vt.cfg.mipChainLength; i++)
         {
             if (vt.mipLevelTouched[i] == true) // the whole touched, minrow, maxrow mess is there so we update only between the lowest and highest modified row, or nothing at all if no pixels are touched. ideally the page table updates should be much more finely grained than that.
             {
 #if USE_PBO_PAGETABLE
-                glTexSubImage2D(GL_TEXTURE_2D, i, 0, vt.mipLevelMinrow[i], c.virtTexDimensionPages >> i, vt.mipLevelMaxrow[i] + 1 - vt.mipLevelMinrow[i], GL_RGBA, GL_UNSIGNED_BYTE, (uint32_t *) NULL + (vt.pageTableMipOffsets[i] + (c.virtTexDimensionPages >> i) * vt.mipLevelMinrow[i]));
+                glTexSubImage2D(GL_TEXTURE_2D, i, 0, vt.mipLevelMinrow[i], vt.cfg.virtTexDimensionPages >> i, vt.mipLevelMaxrow[i] + 1 - vt.mipLevelMinrow[i], GL_RGBA, GL_UNSIGNED_BYTE, (uint32_t *) NULL + (vt.pageTableMipOffsets[i] + (vt.cfg.virtTexDimensionPages >> i) * vt.mipLevelMinrow[i]));
 #else
-                glTexSubImage2D(GL_TEXTURE_2D, i, 0, vt.mipLevelMinrow[i], c.virtTexDimensionPages >> i, vt.mipLevelMaxrow[i] + 1 - vt.mipLevelMinrow[i], GL_RGBA, GL_UNSIGNED_BYTE, vt.pageTables[i] + (c.virtTexDimensionPages >> i) * vt.mipLevelMinrow[i]);
+                glTexSubImage2D(GL_TEXTURE_2D, i, 0, vt.mipLevelMinrow[i], vt.cfg.virtTexDimensionPages >> i, vt.mipLevelMaxrow[i] + 1 - vt.mipLevelMinrow[i], GL_RGBA, GL_UNSIGNED_BYTE, vt.pageTables[i] + (vt.cfg.virtTexDimensionPages >> i) * vt.mipLevelMinrow[i]);
 #endif
             }
         }
@@ -236,7 +233,7 @@ void vtMapNewPages()
         // else
         //     std = 0.;
 
-        int pageOverflow =    vt.necessaryPageCount + c.residentPages - c.physTexDimensionPages * c.physTexDimensionPages;
+        int pageOverflow =    vt.necessaryPageCount + vt.cfg.residentPages - vt.cfg.physTexDimensionPages * vt.cfg.physTexDimensionPages;
 
         if (pageOverflow > -2.0f)
             vt.bias += 0.1f;
@@ -250,9 +247,9 @@ void vtMapNewPages()
 #endif
 
 //    // testcode for performing quality tests. it spews out a list of loaded pages every frame. this can be compared against a reference list with pixel coverage information (produced by commented code in vtExtractNeededPages()). make sure the simulation runs at 60FPS and is at a specific walthrough position each frame. 
-//    for (int x = 0; x < c.physTexDimensionPages; x++)
+//    for (int x = 0; x < vt.cfg.physTexDimensionPages; x++)
 //    {
-//        for (int y = 0; y < c.physTexDimensionPages; y++)
+//        for (int y = 0; y < vt.cfg.physTexDimensionPages; y++)
 //        {
 //            if ((vt.textureStorageInfo[x][y].clockUsed == vt.thisFrameClock))
 //            {
@@ -316,28 +313,18 @@ void vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_locat
         touchMipRow(mipmap_level, y_coord)
     }
 }
-                  
-void vtUnmapPageCompleteley(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location)
-{
-    vtUnmapPage(mipmap_level, x_coord, y_coord, x_storage_location, y_storage_location);
-
-    vt.textureStorageInfo[x_storage_location][y_storage_location].x = 0;
-    vt.textureStorageInfo[x_storage_location][y_storage_location].y = 0;
-    vt.textureStorageInfo[x_storage_location][y_storage_location].mip = 0;
-    vt.textureStorageInfo[x_storage_location][y_storage_location].clockUsed = 0;
-}
 
 void __debugEraseCachedPages()
 {
 #ifdef DEBUG_ERASE_CACHED_PAGES_EVERY_FRAME
-    for (uint8_t i = 0; i < c.mipChainLength; i++)
-        for (uint16_t x = 0; x < (c.virtTexDimensionPages >> i); x++)
-            for (uint16_t y = 0; y < (c.virtTexDimensionPages >> i); y++)
+    for (uint8_t i = 0; i < vt.cfg.mipChainLength; i++)
+        for (uint16_t x = 0; x < (vt.cfg.virtTexDimensionPages >> i); x++)
+            for (uint16_t y = 0; y < (vt.cfg.virtTexDimensionPages >> i); y++)
                 PAGE_TABLE(i, x, y) = kTableFree;
 
-    for (int x = 0; x < c.physTexDimensionPages; x++)
+    for (int x = 0; x < vt.cfg.physTexDimensionPages; x++)
     {
-        for (int y = 0; y < c.physTexDimensionPages; y++)
+        for (int y = 0; y < vt.cfg.physTexDimensionPages; y++)
         {
             vt.textureStorageInfo[x][y].x = 0;
             vt.textureStorageInfo[x][y].y = 0;

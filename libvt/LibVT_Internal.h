@@ -1,11 +1,44 @@
-#include "LibVT_Config.h"
-
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
 #include <time.h>
 #include <assert.h>
 #include <math.h>
 #include <sys/types.h>
+#include <dirent.h>
 
-// TARGET_GLES
+#ifdef WIN32                // Windows
+    #define PATH_SEPERATOR "\\"
+#elif defined(__APPLE__)    // Mac
+    #include <fcntl.h>      // For F_GLOBAL_NOCACHE
+    #import <TargetConditionals.h>
+    #define PATH_SEPERATOR "/"
+#elif defined(linux)        // Linux
+    #define PATH_SEPERATOR "/"
+    #include <stdlib.h>
+    #include <locale.h>
+#else
+    #error COULD_NOT_GUESS_TARGET_SYSTEM
+#endif
+
+#include <iostream>
+#include <queue>
+#include <map>
+#include <vector>
+#include <string>
+
+//#undef TIME_UTC
+
+#include <thread>
+#include <functional>
+#define THREAD_ID static_cast<unsigned long long>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
+
+#if ENABLE_MT
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+#endif
+
 #include <OpenGLES/GLES2/gl2.h>
 #include <OpenGLES/GLES2/gl2ext.h>
 #define glBindFramebufferEXT glBindFramebuffer
@@ -18,55 +51,12 @@
 #define GL_UNSIGNED_INT_8_8_8_8_REV    GL_UNSIGNED_BYTE
 #define GL_BGRA GL_BGRA_EXT
 
-#ifdef WIN32
-    #define PATH_SEPERATOR "\\"
-    #include <dirent.h>
-    #include <stdio.h>
-    #include <string.h>
-    #include <stdarg.h>
+using namespace std;
 
-#elif defined(__APPLE__)
-    #include <fcntl.h>  // Add this include for F_GLOBAL_NOCACHE
-
-    #import <TargetConditionals.h>
-    #define PATH_SEPERATOR "/"
-    #include <dirent.h>
-
-#elif defined(linux)
-    #define PATH_SEPERATOR "/"
-    #include <dirent.h>
-    #include <stdio.h>
-    #include <string.h>
-    #include <stdarg.h>
-    #include <stdlib.h>
-    #include <locale.h>
-
-#else
-    #error COULD_NOT_GUESS_TARGET_SYSTEM
-#endif
-
-#include <iostream>
-#include <queue>
-#include <map>
-#include <vector>
-#include <string>
-
-#undef TIME_UTC
-
-#include <thread>
-#include <functional>
-#define THREAD_ID static_cast<unsigned long long>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
-
-#if ENABLE_MT
-#include <atomic>
-#include <mutex>
-#include <condition_variable>
-#endif
+#include "LibVT_Config.h"
 
 void vtShutdown();
 static inline void vt_fatal(const char *err, ...) {va_list ap; va_start (ap, err); vtShutdown(); vfprintf (stderr, err, ap); va_end (ap); exit(1); }
-
-using namespace std;
 
 enum {
     kCustomReadback = 1,
@@ -107,11 +97,11 @@ enum {
     #define EXTRACT_X(page)         (BYTE3(page))
 #endif
 
-#define PAGE_TABLE(m, x, y)         (vt.pageTables[(m)][(y) * (c.virtTexDimensionPages >> (m)) + (x)])
+#define PAGE_TABLE(m, x, y)         (vt.pageTables[(m)][(y) * (vt.cfg.virtTexDimensionPages >> (m)) + (x)])
 #define EXTRACT_MIP(page)           (BYTE1(page))
 
 #if LONG_MIP_CHAIN
-    #define MIP_INFO(mip)           (c.mipChainLength - 1 - mip)
+    #define MIP_INFO(mip)           (vt.cfg.mipChainLength - 1 - mip)
 #else
     #define MIP_INFO(mip)           (vt.mipTranslation[mip])
 #endif
@@ -154,6 +144,7 @@ struct vtConfig
 
 struct vtData
 {
+    vtConfig                cfg;
     uint16_t                mipTranslation[12];
     uint32_t                pageTableMipOffsets[12];
     GLuint                  fbo, fboColorTexture, fboDepthTexture, physicalTexture, pageTableTexture, mipcalcTexture, pboReadback, pboPagetable, pboPhystex;
@@ -176,16 +167,16 @@ struct vtData
     map<uint32_t, clock_t>  cachedPagesAccessTimes;
 
 #if ENABLE_MT
+    std::thread             loaderThread;
     std::atomic<bool>       shutdownThreads{false};
     std::condition_variable neededPagesAvailableCondition;
     std::mutex              neededPagesMutex;
     std::mutex              newPagesMutex;
     std::mutex              cachedPagesMutex;
-    std::thread             backgroundThread;
 #endif
 
 #if ENABLE_MT > 1
-    std::thread             backgroundThread2;
+    std::thread             decompressorThread;
     std::mutex              compressedMutex;
     queue<uint32_t>         newCompressedPages;
     map<uint32_t, void *>   compressedPages;
@@ -193,6 +184,8 @@ struct vtData
     std::condition_variable compressedPagesAvailableCondition;
 #endif
 };
+
+extern vtData vt;
 
 void        vtLoadNeededPages();
 void        vtLoadNeededPagesDecoupled();
@@ -209,12 +202,11 @@ void        vtcReduceCacheIfNecessaryLOCK(clock_t currentTime);
 void        _vtcRemoveCachedPage(uint32_t pageInfo);
 
 void        vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location);
-void        vtUnmapPageCompleteley(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location);
 
 char        vtuFileExists(char *path);
 void *      vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_size);
 uint32_t *  vtuDownsampleImageRGB(const uint32_t *tex);
-void        vtuPerspective(double m[4][4], double fovy, double aspect,    double zNear, double zFar);
+void        vtuPerspective(double m[4][4], double fovy, double aspect, double zNear, double zFar);
 
 void *      vtuDecompressImageFile(const char *imagePath, uint32_t *pic_size);
 void *      vtuDecompressImageBuffer(const void *file_data, uint32_t file_size, uint32_t *pic_size);

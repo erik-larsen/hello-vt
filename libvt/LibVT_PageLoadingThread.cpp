@@ -3,9 +3,6 @@
 
 // TODO: Consolidate duplicate code blocks below
 
-extern vtData vt;
-extern vtConfig c;
-
 #if ENABLE_MT < 2
 void vtLoadNeededPages()
 {
@@ -47,13 +44,13 @@ void vtLoadNeededPages()
             // load tile from cache or harddrive
             if (!vtcIsPageInCacheLOCK(pageInfo))
             {
-                snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", c.tileDir.c_str(), PATH_SEPERATOR, c.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, y_coord, c.pageCodec.c_str());
+                snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", vt.cfg.tileDir.c_str(), PATH_SEPERATOR, vt.cfg.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, y_coord, vt.cfg.pageCodec.c_str());
 
                 #if DEBUG_LOG > 0
                     printf("Thread %llu: Loading and decompressing page from disk: mip:%u %u/%u\n", THREAD_ID, mip, x_coord, y_coord);
                 #endif
 
-                void *image_data = vtuDecompressImageFile(imagePath, &c.pageDimension);
+                void *image_data = vtuDecompressImageFile(imagePath, &vt.cfg.pageDimension);
 
                 vtcInsertPageIntoCacheLOCK(pageInfo, image_data);
             }
@@ -103,7 +100,7 @@ void vtLoadNeededPagesDecoupled()
             // load tile from cache or harddrive
             if (!vtcIsPageInCacheLOCK(pageInfo))
             {
-                snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", c.tileDir.c_str(), PATH_SEPERATOR, c.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, y_coord, c.pageCodec.c_str());
+                snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", vt.cfg.tileDir.c_str(), PATH_SEPERATOR, vt.cfg.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, y_coord, vt.cfg.pageCodec.c_str());
 
                 #if DEBUG_LOG > 0
                     printf("Thread %llu: Loading page from disk: Mip:%u %u/%u (%i)\n", THREAD_ID, mip, x_coord, y_coord, pageInfo);
@@ -173,7 +170,7 @@ void vtDecompressNeededPagesDecoupled()
                     printf("Thread %llu: Decompressing page from buffer: Mip:%u %u/%u (%i)\n", THREAD_ID, mip, x_coord, y_coord, pageInfo);
                 #endif
 
-                void *image_data = vtuDecompressImageBuffer(file_data, size, &c.pageDimension);
+                void *image_data = vtuDecompressImageBuffer(file_data, size, &vt.cfg.pageDimension);
 
                 free(file_data);
                 vtcInsertPageIntoCacheLOCK(pageInfo, image_data);
@@ -203,13 +200,13 @@ void vtCachePages(queue<uint32_t> pagesToCache)
         {
             // convert from lower left coordinates (opengl) to top left (tile store on disk)
             snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", 
-                c.tileDir.c_str(), PATH_SEPERATOR, c.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, vt.mipTranslation[mip] - y_coord, c.pageCodec.c_str());
+                vt.cfg.tileDir.c_str(), PATH_SEPERATOR, vt.cfg.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, vt.mipTranslation[mip] - y_coord, vt.cfg.pageCodec.c_str());
 
             #if DEBUG_LOG > 0
                 printf("Thread %llu: Caching page from disk: Mip:%u %u/%u\n", THREAD_ID, mip, x_coord, y_coord);
             #endif
 
-            void *image_data = vtuDecompressImageFile(imagePath, &c.pageDimension);
+            void *image_data = vtuDecompressImageFile(imagePath, &vt.cfg.pageDimension);
 
             vtcInsertPageIntoCacheLOCK(pageInfo, image_data);
         }

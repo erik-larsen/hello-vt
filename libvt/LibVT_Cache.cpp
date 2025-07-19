@@ -1,9 +1,6 @@
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
-extern vtData vt;
-extern vtConfig c;
-
 void vtcRemoveCachedPageLOCK(uint32_t pageInfo)
 {
     LOCK(vt.cachedPagesMutex)
@@ -57,14 +54,14 @@ void vtcReduceCacheIfNecessaryLOCK(clock_t currentTime)
 
     uint32_t size = (uint32_t)vt.cachedPages.size();
 
-    if (size > c.maxCachedPages)
+    if (size > vt.cfg.maxCachedPages)
     {
-        uint32_t pagesToErase = (size - c.maxCachedPages) * 4;
-        if (pagesToErase > (c.maxCachedPages / 10)) pagesToErase = c.maxCachedPages / 10;
+        uint32_t pagesToErase = (size - vt.cfg.maxCachedPages) * 4;
+        if (pagesToErase > (vt.cfg.maxCachedPages / 10)) pagesToErase = vt.cfg.maxCachedPages / 10;
         multimap<clock_t, uint32_t> oldestPages;
 
         #if DEBUG_LOG > 0
-            printf("Thread %llu: RAM-cache has %i too many pages - erasing the %i least recently touched pages!\n", THREAD_ID, (size - c.maxCachedPages), pagesToErase);
+            printf("Thread %llu: RAM-cache has %i too many pages - erasing the %i least recently touched pages!\n", THREAD_ID, (size - vt.cfg.maxCachedPages), pagesToErase);
         #endif
 
         for (uint32_t i = 0; i < pagesToErase; i++)

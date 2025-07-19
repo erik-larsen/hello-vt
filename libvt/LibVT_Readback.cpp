@@ -1,9 +1,6 @@
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
-extern vtData vt;
-extern vtConfig c;
-
 void vtPrepareReadback()
 {
     if (READBACK_MODE_FBO)
@@ -129,7 +126,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
             const uint16_t y_coord = (LONG_MIP_CHAIN) ? ((BYTE2(pixel) | ((BYTE1(pixel) & 0xC0)) << 2) >> shift) : (BYTE2(pixel) >> shift);
             const uint16_t x_coord = (LONG_MIP_CHAIN) ? ((BYTE3(pixel) | ((BYTE1(pixel) & 0x30)) << 4) >> shift) : (BYTE3(pixel) >> shift);
 
-            if ((BYTE4(pixel) == 255) && (mip < c.mipChainLength) && (y_coord < (c.virtTexDimensionPages >> mip)) && (x_coord < (c.virtTexDimensionPages >> mip)))
+            if ((BYTE4(pixel) == 255) && (mip < vt.cfg.mipChainLength) && (y_coord < (vt.cfg.virtTexDimensionPages >> mip)) && (x_coord < (vt.cfg.virtTexDimensionPages >> mip)))
             {
 ///*2*/            l.push_back(MAKE_PAGE_INFO(mip, x_coord, y_coord));
 
@@ -158,7 +155,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
                 {
                     const uint8_t yInTexture = BYTE2(pageEntry), xInTexture = BYTE3(pageEntry);
 
-                    fast_assert((xInTexture < c.physTexDimensionPages) && (yInTexture < c.physTexDimensionPages));
+                    fast_assert((xInTexture < vt.cfg.physTexDimensionPages) && (yInTexture < vt.cfg.physTexDimensionPages));
 
                     if (vt.textureStorageInfo[xInTexture][yInTexture].clockUsed != clocks)
                     {
