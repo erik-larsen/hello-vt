@@ -3,6 +3,110 @@
 
 // TODO: Consolidate duplicate code blocks below
 
+char vtuFileExists(char *path)
+{
+    FILE *f;
+
+    f = fopen(path, "r");
+    if (f)
+    {
+        fclose(f);
+        printf("Thread %llu: File exists: %s\n", THREAD_ID, path);
+        return 1;
+    }
+    else {
+        printf("Thread %llu: File does not exist: %s\n", THREAD_ID, path);
+        return 0;
+    }
+}
+
+void * vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_size)
+{
+    uint32_t fs = 0;
+    uint32_t *fsp = &fs;
+
+    FILE *f = fopen(filePath, "rb");
+    if (!f)
+    {
+        printf("Error: tried to load nonexisting file");
+        return NULL;
+    }
+#if defined(__APPLE__)
+    fcntl(f->_file, F_GLOBAL_NOCACHE, 1); // prevent the OS from caching this file in RAM
+#endif
+    assert(f);
+
+    size_t result;
+
+    if (file_size != NULL)
+        fsp = file_size;
+
+    if (*fsp != 0)
+        *fsp = *fsp - offset;
+    else
+    {
+        fseek(f , 0 , SEEK_END);
+        *fsp = ftell(f) - offset;
+    }
+
+    fseek(f, offset, SEEK_SET);
+
+    char *fileData = (char *) malloc(*fsp);
+    assert(fileData);
+
+    result = fread(fileData, 1, *fsp, f);
+    assert(result == *fsp);
+
+    fclose (f);
+
+    return fileData;
+}
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+void * vtuDecompressImageFile(const char *imagePath, uint32_t *pic_size)
+{
+    #if DEBUG_LOG > 0
+        printf("Thread %llu: Load & decompress image file: %s\n", THREAD_ID, imagePath);
+    #endif
+
+    // Load the raw file data into a buffer first
+    uint32_t file_size = 0;
+    void *file_data = vtuLoadFile(imagePath, 0, &file_size);
+    if (file_data && file_size > 0) 
+    {
+        // Now decompress from that buffer
+        void *image_data = vtuDecompressImageBuffer(file_data, file_size, pic_size);
+
+        // Free the intermediate compressed buffer
+        free(file_data);
+        return image_data;
+    }
+    else
+        return NULL;
+}
+
+void * vtuDecompressImageBuffer(const void *file_data, uint32_t file_size, uint32_t *pic_size)
+{
+    #if DEBUG_LOG > 0
+        printf("Thread %llu: Decompress image in-memory: %p\n", THREAD_ID, file_data);
+    #endif
+
+    int width, height, bitdepth;
+    void * image_data = stbi_load_from_memory((const stbi_uc *)file_data, file_size, &width, &height, &bitdepth, STBI_rgb);
+
+    // verify image
+    assert(image_data);
+
+    if (*pic_size == 0)
+        *pic_size = width;
+    else
+        assert(((uint32_t)width == *pic_size) && ((uint32_t)height == *pic_size));
+
+    return image_data;
+}
+
 #if ENABLE_MT < 2
 void vtLoadNeededPages()
 {

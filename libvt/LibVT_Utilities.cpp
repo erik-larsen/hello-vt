@@ -63,65 +63,6 @@ void vtuPerspective(double m[4][4], double fovy, double aspect,    double zNear,
     m[3][2] = -2.0 * zNear * zFar / deltaZ;
 }
 
-char vtuFileExists(char *path)
-{
-    FILE *f;
-
-    f = fopen(path, "r");
-    if (f)
-    {
-        fclose(f);
-        printf("Thread %llu: File exists: %s\n", THREAD_ID, path);
-        return 1;
-    }
-    else {
-        printf("Thread %llu: File does not exist: %s\n", THREAD_ID, path);
-        return 0;
-    }
-}
-
-void * vtuLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_size)
-{
-    uint32_t fs = 0;
-    uint32_t *fsp = &fs;
-
-    FILE *f = fopen(filePath, "rb");
-    if (!f)
-    {
-        printf("Error: tried to load nonexisting file");
-        return NULL;
-    }
-#if defined(__APPLE__)
-    fcntl(f->_file, F_GLOBAL_NOCACHE, 1); // prevent the OS from caching this file in RAM
-#endif
-    assert(f);
-
-    size_t result;
-
-    if (file_size != NULL)
-        fsp = file_size;
-
-    if (*fsp != 0)
-        *fsp = *fsp - offset;
-    else
-    {
-        fseek(f , 0 , SEEK_END);
-        *fsp = ftell(f) - offset;
-    }
-
-    fseek(f, offset, SEEK_SET);
-
-    char *fileData = (char *) malloc(*fsp);
-    assert(fileData);
-
-    result = fread(fileData, 1, *fsp, f);
-    assert(result == *fsp);
-
-    fclose (f);
-
-    return fileData;
-}
-
 GLuint vtuCompileShaderWithPrelude(const char* prelude, const char* shaderSrc, GLenum type) 
 {
     std::string fullShader;
