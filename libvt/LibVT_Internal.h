@@ -1,3 +1,4 @@
+#pragma once
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
@@ -92,12 +93,6 @@ enum {
 #define PAGE_TABLE(m, x, y)         (vt.pageTables[(m)][(y) * (vt.cfg.virtTexDimensionPages >> (m)) + (x)])
 #define EXTRACT_MIP(page)           (BYTE1(page))
 
-#if LONG_MIP_CHAIN
-    #define MIP_INFO(mip)           (vt.cfg.mipChainLength - 1 - mip)
-#else
-    #define MIP_INFO(mip)           (vt.mipTranslation[mip])
-#endif
-
 #if ENABLE_MT
     #define LOCK(x)                 std::unique_lock<std::mutex> scoped_lock(x);
 #else
@@ -109,10 +104,6 @@ enum {
 #else
     #define fast_assert(x)          assert((x))
 #endif
-
-#define touchMipRow(mip, row)       {vt.mipLevelTouched[mip] = true; \
-                                     vt.mipLevelMinrow[mip] = (vt.mipLevelMinrow[mip] < row) ? vt.mipLevelMinrow[mip] : row; \
-                                     vt.mipLevelMaxrow[mip] = (vt.mipLevelMaxrow[mip] > row) ? vt.mipLevelMaxrow[mip] : row; }
 
 #define MAX_PHYS_TEX_DIMENSION_PAGES 64
 
@@ -179,14 +170,20 @@ struct vtData
 
 extern vtData vt;
 
+// LibVT_Config.cpp
+void    vtInitConfig(const char *_tileDir, const char *_pageExtension, const uint8_t _pageBorder, const uint8_t _mipChainLength, const uint16_t _pageDimension);
+
 // LibVT_PageLoading.cpp
-void        vtInitPageLoader(const char *_tileDir);
-void        vtLoadNeededPages();
+void    vtInitPageLoader(const char *_tileDir);
+void    vtLoadNeededPages();
 
 // LibVT_PageCache.cpp
-void        vtTouchCachedPage(uint32_t pageInfo);
-void        vtSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32_t> *cached, queue<uint32_t> *nonCached);
-bool        vtIsPageInCacheLOCK(uint32_t pageInfo);
-void        vtInsertPageIntoCacheLOCK(uint32_t pageInfo, void * image_data);
-void *      vtRetrieveCachedPageLOCK(uint32_t pageInfo);
-void        vtReduceCacheIfNecessaryLOCK(clock_t currentTime);
+void    vtTouchCachedPage(uint32_t pageInfo);
+void    vtSplitPagelistIntoCachedAndNoncachedLOCK(queue<uint32_t> *s, queue<uint32_t> *cached, queue<uint32_t> *nonCached);
+bool    vtIsPageInCacheLOCK(uint32_t pageInfo);
+void    vtInsertPageIntoCacheLOCK(uint32_t pageInfo, void * image_data);
+void *  vtRetrieveCachedPageLOCK(uint32_t pageInfo);
+void    vtReduceCacheIfNecessaryLOCK(clock_t currentTime);
+
+// LibVT_PageTable.cpp
+void    vtInitPageTable();

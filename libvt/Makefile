@@ -38,7 +38,7 @@ VT_INC = -I../deps/include -I../deps/source
 # Compiler flags
 CLANG = clang++ 
 WARN = -Wall
-DEFS = -DTARGET_GLES $(OS_DEFS) 
+DEFS = $(OS_DEFS)
 OPT_DEBUG = -O0 -g
 OPT_NDEBUG = -DNDEBUG -O3
 OPT = $(OPT_DEBUG)

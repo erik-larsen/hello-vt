@@ -1,11 +1,39 @@
 #include "LibVT_Internal.h"
 #include "LibVT.h"
 
-void _mapPageFallbackEntries(int m, int x_coord, int y_coord, int mip, int x, int y);
-void _unmapPageFallbackEntries(int m, int x_coord, int y_coord, int x_search, int y_search, int mip_repl, int x_repl, int y_repl);
-
-//void __debugEraseCachedPages();
+//void debugEraseCachedPages();
 //#define DEBUG_ERASE_CACHED_PAGES_EVERY_FRAME
+
+#if LONG_MIP_CHAIN
+    #define MIP_INFO(mip)           (vt.cfg.mipChainLength - 1 - mip)
+#else
+    #define MIP_INFO(mip)           (vt.mipTranslation[mip])
+#endif
+
+#define TOUCH_MIP_ROW(mip, row)     {vt.mipLevelTouched[mip] = true; \
+                                     vt.mipLevelMinrow[mip] = (vt.mipLevelMinrow[mip] < row) ? vt.mipLevelMinrow[mip] : row; \
+                                     vt.mipLevelMaxrow[mip] = (vt.mipLevelMaxrow[mip] > row) ? vt.mipLevelMaxrow[mip] : row; }
+
+void vtInitPageTable()
+{
+    // init translation tables, offsets and allocate page table
+    uint32_t offsetCounter = 0;
+    for (uint8_t i = 0; i < vt.cfg.mipChainLength; i++)
+    {
+        vt.mipTranslation[i] = (uint16_t) ((vt.cfg.virtTexDimensionPages >> i) - 1); // we do -1 here so we can add +1 in the shader to allow for a mip chain length 9 which results in the translation being 255/256, this is not ideal performance wise...
+        vt.pageTableMipOffsets[i] = offsetCounter;
+        offsetCounter += (vt.cfg.virtTexDimensionPages >> i) * (vt.cfg.virtTexDimensionPages >> i);
+    }
+
+    vt.pageTables = (uint32_t **) malloc(sizeof(uint32_t *) * vt.cfg.mipChainLength);
+    assert(vt.pageTables);
+
+    uint32_t *pageTableBuffer = (uint32_t *) calloc(1, 4 * offsetCounter);
+    assert(pageTableBuffer);
+
+    for (uint8_t i = 0; i < vt.cfg.mipChainLength; i++)
+        vt.pageTables[i] = (uint32_t *)(pageTableBuffer + vt.pageTableMipOffsets[i]);
+}
 
 uint32_t * vtDownsampleImageRGB(const uint32_t *_tex)
 {
@@ -49,6 +77,44 @@ uint32_t * vtDownsampleImageRGB(const uint32_t *_tex)
     return (uint32_t *)smallTex;
 }
 
+void mapPageFallbackEntries(int m, int x_coord, int y_coord, int mip, int x, int y) // TODO: test long mip chain
+{
+    const uint32_t pageEntry = PAGE_TABLE(m, x_coord, y_coord);
+
+    if ((uint8_t) pageEntry != kTableMapped)
+    {
+        PAGE_TABLE(m, x_coord, y_coord) = (MIP_INFO(mip) << 24) + (x << 16) + (y << 8) + ((uint8_t) pageEntry);
+        TOUCH_MIP_ROW(m, y_coord);
+
+        if (m >= 1)
+        {
+            mapPageFallbackEntries(m - 1, x_coord * 2, y_coord * 2, mip, x, y);
+            mapPageFallbackEntries(m - 1, x_coord * 2, y_coord * 2 + 1, mip, x, y);
+            mapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2, mip, x, y);
+            mapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2 + 1, mip, x, y);
+        }
+    }
+}
+
+void unmapPageFallbackEntries(int m, int x_coord, int y_coord, int x_search, int y_search, int mip_repl, int x_repl, int y_repl)
+{
+    const uint32_t pageEntry = PAGE_TABLE(m, x_coord, y_coord);
+
+    if ((BYTE3(pageEntry) == x_search) && (BYTE2(pageEntry) == y_search))
+    {
+        PAGE_TABLE(m, x_coord, y_coord) = (mip_repl << 24) + (x_repl << 16) + (y_repl << 8) + ((uint8_t) pageEntry);
+        TOUCH_MIP_ROW(m, y_coord);
+
+        if (m >= 1)
+        {
+            unmapPageFallbackEntries(m - 1, x_coord * 2, y_coord * 2, x_search, y_search, mip_repl, x_repl, y_repl);
+            unmapPageFallbackEntries(m - 1, x_coord * 2, y_coord * 2 + 1, x_search, y_search, mip_repl, x_repl, y_repl);
+            unmapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2, x_search, y_search, mip_repl, x_repl, y_repl);
+            unmapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2 + 1, x_search, y_search, mip_repl, x_repl, y_repl);
+        }
+    }
+}
+
 void vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_location, int y_storage_location)
 {
     if (FALLBACK_ENTRIES)
@@ -56,12 +122,12 @@ void vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_locat
         const uint32_t pageEntry = PAGE_TABLE(mipmap_level + 1, x_coord / 2, y_coord / 2);
         *((uint8_t *)&PAGE_TABLE(mipmap_level, x_coord, y_coord)) = kTableFree;
         
-        _unmapPageFallbackEntries(mipmap_level, x_coord, y_coord, x_storage_location, y_storage_location, BYTE4(pageEntry), BYTE3(pageEntry), BYTE2(pageEntry));
+        unmapPageFallbackEntries(mipmap_level, x_coord, y_coord, x_storage_location, y_storage_location, BYTE4(pageEntry), BYTE3(pageEntry), BYTE2(pageEntry));
     }
     else
     {
         PAGE_TABLE(mipmap_level, x_coord, y_coord) = kTableFree;
-        touchMipRow(mipmap_level, y_coord)
+        TOUCH_MIP_ROW(mipmap_level, y_coord);
     }
 }
 
@@ -194,16 +260,16 @@ void vtMapNewPages()
 
                 PAGE_TABLE(mip, x_coord, y_coord) = (MIP_INFO(mip) << 24) + (x << 16) + (y << 8) + kTableMapped;
 
-                touchMipRow(mip, y_coord)
+                TOUCH_MIP_ROW(mip, y_coord);
 
                 if (FALLBACK_ENTRIES)
                 {
                     if (mip >= 1)
                     {
-                        _mapPageFallbackEntries(mip - 1, x_coord * 2, y_coord * 2, mip, x, y);
-                        _mapPageFallbackEntries(mip - 1, x_coord * 2, y_coord * 2 + 1, mip, x, y);
-                        _mapPageFallbackEntries(mip - 1, x_coord * 2 + 1, y_coord * 2, mip, x, y);
-                        _mapPageFallbackEntries(mip - 1, x_coord * 2 + 1, y_coord * 2 + 1, mip, x, y);
+                        mapPageFallbackEntries(mip - 1, x_coord * 2, y_coord * 2, mip, x, y);
+                        mapPageFallbackEntries(mip - 1, x_coord * 2, y_coord * 2 + 1, mip, x, y);
+                        mapPageFallbackEntries(mip - 1, x_coord * 2 + 1, y_coord * 2, mip, x, y);
+                        mapPageFallbackEntries(mip - 1, x_coord * 2 + 1, y_coord * 2 + 1, mip, x, y);
                     }
                 }
 
@@ -301,7 +367,7 @@ void vtMapNewPages()
     }
 
 #ifdef DEBUG_ERASE_CACHED_PAGES_EVERY_FRAME
-    __debugEraseCachedPages();
+    debugEraseCachedPages();
 #endif
 
 //    // testcode for performing quality tests. it spews out a list of loaded pages every frame. this can be compared against a reference list with pixel coverage information (produced by commented code in vtExtractNeededPages()). make sure the simulation runs at 60FPS and is at a specific walthrough position each frame. 
@@ -318,45 +384,7 @@ void vtMapNewPages()
 //    printf("\n\nNEWFRAME\n\n");
 }
 
-void _mapPageFallbackEntries(int m, int x_coord, int y_coord, int mip, int x, int y) // TODO: test long mip chain
-{
-    const uint32_t pageEntry = PAGE_TABLE(m, x_coord, y_coord);
-
-    if ((uint8_t) pageEntry != kTableMapped)
-    {
-        PAGE_TABLE(m, x_coord, y_coord) = (MIP_INFO(mip) << 24) + (x << 16) + (y << 8) + ((uint8_t) pageEntry);
-        touchMipRow(m, y_coord)
-
-        if (m >= 1)
-        {
-            _mapPageFallbackEntries(m - 1, x_coord * 2, y_coord * 2, mip, x, y);
-            _mapPageFallbackEntries(m - 1, x_coord * 2, y_coord * 2 + 1, mip, x, y);
-            _mapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2, mip, x, y);
-            _mapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2 + 1, mip, x, y);
-        }
-    }
-}
-
-void _unmapPageFallbackEntries(int m, int x_coord, int y_coord, int x_search, int y_search, int mip_repl, int x_repl, int y_repl)
-{
-    const uint32_t pageEntry = PAGE_TABLE(m, x_coord, y_coord);
-
-    if ((BYTE3(pageEntry) == x_search) && (BYTE2(pageEntry) == y_search))
-    {
-        PAGE_TABLE(m, x_coord, y_coord) = (mip_repl << 24) + (x_repl << 16) + (y_repl << 8) + ((uint8_t) pageEntry);
-        touchMipRow(m, y_coord)
-
-        if (m >= 1)
-        {
-            _unmapPageFallbackEntries(m - 1, x_coord * 2, y_coord * 2, x_search, y_search, mip_repl, x_repl, y_repl);
-            _unmapPageFallbackEntries(m - 1, x_coord * 2, y_coord * 2 + 1, x_search, y_search, mip_repl, x_repl, y_repl);
-            _unmapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2, x_search, y_search, mip_repl, x_repl, y_repl);
-            _unmapPageFallbackEntries(m - 1, x_coord * 2 + 1, y_coord * 2 + 1, x_search, y_search, mip_repl, x_repl, y_repl);
-        }
-    }
-}
-
-void __debugEraseCachedPages()
+void debugEraseCachedPages()
 {
 #ifdef DEBUG_ERASE_CACHED_PAGES_EVERY_FRAME
     for (uint8_t i = 0; i < vt.cfg.mipChainLength; i++)

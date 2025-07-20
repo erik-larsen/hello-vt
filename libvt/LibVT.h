@@ -2,6 +2,7 @@
  * @file    LibVT.h
  * @brief    The external header file for LibVT, declares public functions.
  */
+#pragma once
 
 /*!
  * @fn vtInit(const char *_tileDir, const char *_pageExtension, const uint8_t _pageBorder, const uint8_t _mipChainLength, const uint16_t _pageDimension)

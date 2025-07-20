@@ -180,10 +180,10 @@ char * vtGetShaderPrelude()
     setlocale( LC_ALL, "C" );
 
     char *buf = (char *) calloc(1, 2048);
-    snprintf(buf, 2048,    vtShaderPreludeTemplate,
-                        (float)vt.cfg.physTexDimensionPages, (float)vt.cfg.pageDimension, log2f(vt.cfg.pageDimension), (float)PREPASS_RESOLUTION_REDUCTION_SHIFT,
-                        (float)vt.cfg.virtTexDimensionPages, (float)(vt.cfg.virtTexDimensionPages * vt.cfg.pageDimension), (float)vt.cfg.pageBorder, float(ANISOTROPY),
-                        USE_MIPCALC_TEXTURE, vt.cfg.pageBorder, MIPPED_PHYSTEX, FALLBACK_ENTRIES, ANISOTROPY, LONG_MIP_CHAIN, TEXUNIT_FOR_MIPCALC, TEXUNIT_FOR_PHYSTEX, TEXUNIT_FOR_PAGETABLE);
+    snprintf(buf, 2048, vtShaderPreludeTemplate,
+        (float)vt.cfg.physTexDimensionPages, (float)vt.cfg.pageDimension, log2f(vt.cfg.pageDimension), (float)PREPASS_RESOLUTION_REDUCTION_SHIFT,
+        (float)vt.cfg.virtTexDimensionPages, (float)(vt.cfg.virtTexDimensionPages * vt.cfg.pageDimension), (float)vt.cfg.pageBorder, float(ANISOTROPY),
+        USE_MIPCALC_TEXTURE, vt.cfg.pageBorder, MIPPED_PHYSTEX, FALLBACK_ENTRIES, ANISOTROPY, LONG_MIP_CHAIN, TEXUNIT_FOR_MIPCALC, TEXUNIT_FOR_PHYSTEX, TEXUNIT_FOR_PAGETABLE);
     return buf;
 }
 
