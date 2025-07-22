@@ -2,7 +2,7 @@
 
 ![VT sample app](media/hello-vt.png)
 
-A minimal yet complete implementation of virtual texturing that is cross-platform and provides a reference sample app.
+A complete yet minimal implementation of virtual texturing that is cross-platform and provides a reference sample app.
 
 Virtual texturing is a technique for viewing textures which are larger than can fit in memory.  These mega textures are mipmapped and each mipmap level is tiled.  Each tile (also called a page) is stored on disk as a separate image file.  Tiles are then loaded on-demand based on the current view.  Rendering tiles is done in the main thread, with loading and decompressing of pages done asynchronously on one or two background threads, leading to smooth panning and zooming of these big textures.
 
