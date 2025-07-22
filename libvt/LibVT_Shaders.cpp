@@ -2,10 +2,10 @@
 #include "LibVT.h"
 
 // Prelude common to all VT shaders
-static const char* vtShaderPreludeTemplate = R"(   
+static const char* vtShaderPreludeTemplate = R"(
     //  LibVT Virtual Texturing Shaders
     //  Based on Sean Barrett's public domain "Sparse Virtual Textures" demo shaders
-    
+
     precision mediump float;
 
     const float phys_tex_dimension_pages = %f;
@@ -29,10 +29,10 @@ static const char* vtShaderPreludeTemplate = R"(
 
 )";
 
-static const char* vtReadbackVertGLSL = R"( 
+static const char* vtReadbackVertGLSL = R"(
     //
     // vtReadbackVertGLSL
-    //    
+    //
     uniform mat4 matViewProjection;
     attribute vec4 vertex;
     attribute vec2 texcoord0;
@@ -71,7 +71,7 @@ static const char* vtRenderVertGLSL = R"(
     {
         gl_Position = matViewProjection * vertex;
         texcoord    = texcoord0.xy;
-    } 
+    }
 )";
 
 static const char* vtRenderFragGLSL = R"(
@@ -117,7 +117,7 @@ static const char* vtRenderFragGLSL = R"(
     }
 )";
 
-GLuint vtCompileShaderWithPrelude(const char* prelude, const char* shaderSrc, GLenum type) 
+GLuint vtCompileShaderWithPrelude(const char* prelude, const char* shaderSrc, GLenum type)
 {
     std::string fullShader;
 
@@ -128,7 +128,7 @@ GLuint vtCompileShaderWithPrelude(const char* prelude, const char* shaderSrc, GL
     fullShader.append(shaderSrc);
 
     const char* fullShaderStr = fullShader.c_str();
-    
+
     GLuint shader = glCreateShader(type);
 
     #if DEBUG_LOG > 2
@@ -137,7 +137,7 @@ GLuint vtCompileShaderWithPrelude(const char* prelude, const char* shaderSrc, GL
 
     glShaderSource(shader, 1, &fullShaderStr, nullptr);
     glCompileShader(shader);
-    
+
     GLint success;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
@@ -154,12 +154,12 @@ GLuint vtLoadShadersWithPrelude(const char* prelude, const char* vertSrc, const 
 {
     GLuint vertexShader = vtCompileShaderWithPrelude(prelude, vertSrc, GL_VERTEX_SHADER);
     GLuint fragmentShader = vtCompileShaderWithPrelude(prelude, fragSrc, GL_FRAGMENT_SHADER);
-    
+
     GLuint program = glCreateProgram();
     glAttachShader(program, vertexShader);
     glAttachShader(program, fragmentShader);
     glLinkProgram(program);
-    
+
     GLint success;
     glGetProgramiv(program, GL_LINK_STATUS, &success);
     if (!success) {
@@ -168,10 +168,10 @@ GLuint vtLoadShadersWithPrelude(const char* prelude, const char* vertSrc, const 
         vt_fatal("Shader program linking failed: %s\n", infoLog);
         return 0;
     }
-    
+
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
-    
+
     return program;
 }
 
@@ -193,6 +193,6 @@ void vtLoadShaders(GLuint* readbackShader, GLuint* renderVTShader)
 
       *readbackShader = vtLoadShadersWithPrelude(prelude, vtReadbackVertGLSL, vtReadbackFragGLSL);
       *renderVTShader = vtLoadShadersWithPrelude(prelude, vtRenderVertGLSL, vtRenderFragGLSL);
- 
+
     free(prelude);
 }

@@ -183,14 +183,14 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
             }
         }
     }
-    
+
 ///*2*/        l.sort();
 ///*2*/        l.unique();
 ///*2*/        printf("%i \n", (int)l.size());
 
     map<uint32_t, uint16_t>::iterator tmpPagesIter1;
     multimap<uint16_t, uint32_t>::reverse_iterator tmpPagesIter2;
-    
+
 ///*1*/    printf("NEWFRAME\n\n");
 ///*1*/    for (tmpPagesIter1 = bla.begin(); tmpPagesIter1 != bla.end(); ++tmpPagesIter1)
 ///*1*/    printf("PAGE: %i %i\n", tmpPagesIter1->first, tmpPagesIter1->second);

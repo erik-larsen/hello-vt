@@ -121,7 +121,7 @@ void vtUnmapPage(int mipmap_level, int x_coord, int y_coord, int x_storage_locat
     {
         const uint32_t pageEntry = PAGE_TABLE(mipmap_level + 1, x_coord / 2, y_coord / 2);
         *((uint8_t *)&PAGE_TABLE(mipmap_level, x_coord, y_coord)) = kTableFree;
-        
+
         unmapPageFallbackEntries(mipmap_level, x_coord, y_coord, x_storage_location, y_storage_location, BYTE4(pageEntry), BYTE3(pageEntry), BYTE2(pageEntry));
     }
     else
@@ -242,7 +242,7 @@ void vtMapNewPages()
                 {
                     // unmap page
                     #if DEBUG_LOG > 0
-                        printf("Thread %llu: Unloading page from VRAM: Mip:%u %u/%u from %u/%u lastUsed: %llu\n", 
+                        printf("Thread %llu: Unloading page from VRAM: Mip:%u %u/%u from %u/%u lastUsed: %llu\n",
                             THREAD_ID, vt.textureStorageInfo[x][y].mip, vt.textureStorageInfo[x][y].x, vt.textureStorageInfo[x][y].y, x, y, (long long unsigned int)lowestClock);
                     #endif
 
@@ -370,7 +370,7 @@ void vtMapNewPages()
     debugEraseCachedPages();
 #endif
 
-//    // testcode for performing quality tests. it spews out a list of loaded pages every frame. this can be compared against a reference list with pixel coverage information (produced by commented code in vtExtractNeededPages()). make sure the simulation runs at 60FPS and is at a specific walthrough position each frame. 
+//    // testcode for performing quality tests. it spews out a list of loaded pages every frame. this can be compared against a reference list with pixel coverage information (produced by commented code in vtExtractNeededPages()). make sure the simulation runs at 60FPS and is at a specific walthrough position each frame.
 //    for (int x = 0; x < vt.cfg.physTexDimensionPages; x++)
 //    {
 //        for (int y = 0; y < vt.cfg.physTexDimensionPages; y++)

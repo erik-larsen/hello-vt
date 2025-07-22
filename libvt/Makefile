@@ -33,10 +33,10 @@ LIB_DIR = ./bin/$(OS)-$(HW)
 # Include paths
 PKG_INC = -I$(PKG_PATH)/include
 GLES_INC = -I../deps/include/OpenGLES
-VT_INC = -I../deps/include -I../deps/source 
+VT_INC = -I../deps/include -I../deps/source
 
 # Compiler flags
-CLANG = clang++ 
+CLANG = clang++
 WARN = -Wall
 DEFS = $(OS_DEFS)
 OPT_DEBUG = -O0 -g
@@ -57,7 +57,7 @@ $(LIB_DIR):
 	mkdir -p $@
 
 $(LIB_DIR)/%.o: $(SRC_DIR)/%.cpp $(HDRS) | $(LIB_DIR)
-	$(CLANG) $(CFLAGS) $(PKG_INC) $(GLES_INC) $(VT_INC) -c $< -o $@ 
+	$(CLANG) $(CFLAGS) $(PKG_INC) $(GLES_INC) $(VT_INC) -c $< -o $@
 
 $(LIB): $(OBJS) | $(LIB_DIR)
 	$(AR) $@ $(OBJS)

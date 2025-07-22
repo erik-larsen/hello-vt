@@ -140,7 +140,7 @@ void vtPrepare(const GLuint readbackShader, const GLuint renderVTShader)
 }
 
 void vtShutdown()
-{    
+{
 #if ENABLE_MT
     // Signal threads to shut down
     vt.shutdownThreads = true;

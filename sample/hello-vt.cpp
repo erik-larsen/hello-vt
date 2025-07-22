@@ -2,7 +2,7 @@
 
     hello-vt.cpp
 
-    1. Use the python script "generateVirtualTexureTiles.py" to preprocess the full-resolution version of your texture atlas. 
+    1. Use the python script "generateVirtualTexureTiles.py" to preprocess the full-resolution version of your texture atlas.
     This generates the virtual texture tile store.
 
     2. Adjust the values in "LibVT_Config.h" to match your generated virtual texture tile store, your application and its rendersettings.
@@ -11,17 +11,17 @@
     - At startup call vtInit() with the path to your tile store, the border width, the mipchain length and the tilesize
     - Call vtGetShaderPrelude() to obtain the prelude to prepend to the shaders and load the readback and renderVT shaders.
     - When OpenGL is callable call vtPrepare() and pass it the shader objects.
-    - Call vtReshape() now with the screen width, height, as well as fov, nearplane and farplane (only imporant in readback reduction mode). 
+    - Call vtReshape() now with the screen width, height, as well as fov, nearplane and farplane (only imporant in readback reduction mode).
         This call must also be made every time any of these values change, i.e. at viewport resize time.
-    - Now in the renderloop: 
-        - call vtPrepareReadback() 
+    - Now in the renderloop:
+        - call vtPrepareReadback()
         - render with the readback shader
-        - call vtPerformReadback() 
-        - vtExtractNeededPages() 
-        - vtMapNewPages() 
-        - and then render with the renderVT shader. 
+        - call vtPerformReadback()
+        - vtExtractNeededPages()
+        - vtMapNewPages()
+        - and then render with the renderVT shader.
         Additionally pass the result of vtGetBias() to both shaders as value for "mip_bias" each frame if you have the dynamic lod adjustment turned on.
-    - At shutdown call vtShutdown() 
+    - At shutdown call vtShutdown()
 
 */
 
@@ -56,7 +56,7 @@ const unsigned int texRectIndices[] = {
     0, 2, 3
 };
 
-void checkShaderBuilt(const char* shader_name, GLenum status, GLuint shader) 
+void checkShaderBuilt(const char* shader_name, GLenum status, GLuint shader)
 {
     GLint success;
     glGetShaderiv(shader, status, &success);
@@ -140,7 +140,7 @@ void initTexRectTexture()
     if (image)
     {
         int bitsPerPixel = image->format->BitsPerPixel;
-        printf ("INFO: %s (%dx%d, %d bits) load OK\n", 
+        printf ("INFO: %s (%dx%d, %d bits) load OK\n",
             texRectTexFilename, image->w, image->h, bitsPerPixel);
 
         // Determine GL texture format
@@ -170,8 +170,8 @@ void initTexRectTexture()
             glTexImage2D(GL_TEXTURE_2D, 0, format, image->w, image->h, 0,
                          format, GL_UNSIGNED_BYTE, image->pixels);
         }
-                                 
-        SDL_FreeSurface (image);        
+
+        SDL_FreeSurface (image);
     }
     else
         printf("ERROR: Load %s failed, reason:%s\n", texRectTexFilename, IMG_GetError());
@@ -241,8 +241,8 @@ void renderTexRect()
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
-void cleanupTexRect() 
-{   
+void cleanupTexRect()
+{
     glDeleteBuffers(1, &texRectVBO);
     glDeleteBuffers(1, &texRectEBO);
     glDeleteProgram(texRectShader);
@@ -348,8 +348,8 @@ void renderVT()
     glUseProgram(0);
 }
 
-void cleanupVT() 
-{   
+void cleanupVT()
+{
     vtShutdown();
 
     glDeleteBuffers(1, &vtVBO);
@@ -359,8 +359,8 @@ void cleanupVT()
 }
 
 //
-// GLES 
-// 
+// GLES
+//
 void initGL()
 {
     printf("INFO: GL vendor: %s\n", glGetString(GL_VENDOR));
@@ -396,7 +396,7 @@ void cleanupGL()
 }
 
 
-// 
+//
 // Camera
 //
 mat4x4 camScaleMat;
@@ -405,7 +405,7 @@ mat4x4 camTransMat;
 mat4x4 camModelViewMat;
 mat4x4 camProjMat;
 
-void updateModelViewProjCam() 
+void updateModelViewProjCam()
 {
     mat4x4 viewMat;
     mat4x4_identity(viewMat);
@@ -422,14 +422,14 @@ void updateModelViewProjCam()
     // printf("modelview:\n");
     // mat4x4_print(camModelViewMat);
     // printf("projection:\n");
-    // mat4x4_print(camProjMat);   
+    // mat4x4_print(camProjMat);
 
     // Update shaders
     updateModelViewProjTexRect(camModelViewMat, camProjMat);
     updateModelViewProjVT(camModelViewMat, camProjMat);
 }
 
-void resetViewCam() 
+void resetViewCam()
 {
     mat4x4_identity(camScaleMat);
     mat4x4_identity(camRotMat);
@@ -437,7 +437,7 @@ void resetViewCam()
     updateModelViewProjCam();
 }
 
-void initCam() 
+void initCam()
 {
     mat4x4_identity(camProjMat);
     mat4x4_identity(camModelViewMat);
@@ -452,7 +452,7 @@ void resizeViewportCam(int width, int height)
     printf("INFO: updated aspect to %f\n", aspect);
 
     const float fov = 45.0f, nearPlane = 0.01f, farPlane = 1000.0f;
-    mat4x4_perspective(camProjMat, 
+    mat4x4_perspective(camProjMat,
         fov * M_PI / 180.0f,    // fovy in radians
         aspect,                 // aspect ratio
         nearPlane,              // near plane
@@ -483,19 +483,19 @@ void rotateCam(int xrel, int yrel, int width, int height)
     const float sensitivity = 0.01f;
 
     vec2 dragVec = {
-        xrel * sensitivity,   
+        xrel * sensitivity,
         -yrel * sensitivity
     };
-    
+
     mat4x4 identityMat;
     mat4x4_identity(identityMat);
 
     mat4x4 deltaRot;
     mat4x4_arcball(deltaRot, identityMat, vec2{0, 0}, dragVec, 1.0f);
     mat4x4_mul(camRotMat, camRotMat, deltaRot);
-        
+
     // printf("INFO: dragVec = %f, %f\n", dragVec[0], dragVec[1]);
-    updateModelViewProjCam();    
+    updateModelViewProjCam();
 }
 
 void panCam(int x, int y)
@@ -511,7 +511,7 @@ void panCam(int x, int y)
 
 //
 // SDL with OpenGLES context
-// 
+//
 SDL_Window* sdlWindow = nullptr;
 SDL_GLContext sdlGLContext;
 
@@ -527,7 +527,7 @@ void initSDL(int vpWidth, int vpHeight)
     SDL_SetHint(SDL_HINT_OPENGL_ES_DRIVER, "1");
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_EGL, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24); 
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetSwapInterval(1); // 1 = sync framerate to refresh rate (no screen tearing)
 
@@ -564,22 +564,22 @@ bool processEventsSDL()
     bool running = true;
 
     SDL_Event event;
-    while (SDL_PollEvent(&event)) 
+    while (SDL_PollEvent(&event))
     {
-        switch (event.type) 
+        switch (event.type)
         {
-            case SDL_QUIT: 
+            case SDL_QUIT:
                 running = false;
                 break;
 
-            case SDL_KEYDOWN: 
+            case SDL_KEYDOWN:
                 {
                     const Uint8* keyStates = SDL_GetKeyboardState(NULL);
 
                     // Quit
-                    if (keyStates[SDL_SCANCODE_ESCAPE]) 
+                    if (keyStates[SDL_SCANCODE_ESCAPE])
                         running = false;
-                    
+
                     // Reset view
                     else if (keyStates[SDL_SCANCODE_R])
                         resetViewCam();
@@ -596,7 +596,7 @@ bool processEventsSDL()
                 }
                 break;
 
-            case SDL_WINDOWEVENT: 
+            case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED)
                     resizeViewportSDL();
                 break;
@@ -632,9 +632,9 @@ void mainLoopSDL()
         SDL_GL_SwapWindow(sdlWindow);
 
         // Don't exceed maximum framerate of 60 fps
-        const int maxFPS = 60; 
+        const int maxFPS = 60;
         const int minFrameTime = 1000 / maxFPS; // Minimum frame duration in ms
-        Uint32 frameTime = SDL_GetTicks() - frameStart; 
+        Uint32 frameTime = SDL_GetTicks() - frameStart;
         if (frameTime < minFrameTime)
             SDL_Delay(minFrameTime - frameTime); // Make frame take minFrameTime
     }
@@ -647,7 +647,7 @@ void cleanupSDL()
     SDL_Quit();
 }
 
-int main(int argc, char* argv[]) 
+int main(int argc, char* argv[])
 {
     // Init
     int vpWidth = 800, vpHeight = 600;
@@ -666,4 +666,4 @@ int main(int argc, char* argv[])
     cleanupSDL();
 
     return 0;
-} 
+}

@@ -94,7 +94,7 @@ void * vtDecompressImageFile(const char *imagePath, uint32_t *pic_size)
     // Load the raw file data into a buffer first
     uint32_t file_size = 0;
     void *file_data = vtLoadFile(imagePath, 0, &file_size);
-    if (file_data && file_size > 0) 
+    if (file_data && file_size > 0)
     {
         // Now decompress from that buffer
         void *image_data = vtDecompressImageBuffer(file_data, file_size, pic_size);
@@ -130,7 +130,7 @@ void vtLoadNeededPages()
                     break;
             #endif
 
-            uint8_t i = 0;    
+            uint8_t i = 0;
             while (!vt.neededPages.empty() && i < limit) // TODO: all this copying could use preallocation of necessary space (not only here)
             {
                 neededPages.push(vt.neededPages.front());
@@ -303,7 +303,7 @@ void vtCachePages(queue<uint32_t> pagesToCache)
         if (!vtIsPageInCacheLOCK(pageInfo))
         {
             // convert from lower left coordinates (opengl) to top left (tile store on disk)
-            snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s", 
+            snprintf(imagePath, 255, "%s%stiles_b%u_level%u%stile_%u_%u_%u.%s",
                 vt.cfg.tileDir.c_str(), PATH_SEPERATOR, vt.cfg.pageBorder, mip, PATH_SEPERATOR, mip, x_coord, vt.mipTranslation[mip] - y_coord, vt.cfg.pageCodec.c_str());
 
             #if DEBUG_LOG > 0
@@ -391,7 +391,7 @@ bool vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, u
                 {
                     uint32_t len = (uint32_t) file.length();
                     codec = file.substr(len - 4);
-                    if (codec[0] == '.') 
+                    if (codec[0] == '.')
                         codec = codec.substr(1);
                     *_pageDimension = 0;
                     void *image = vtDecompressImageFile(string(string(_tileDir) + string("/") + string (tilestring) + string("/") + file).c_str(), _pageDimension);
