@@ -35,7 +35,7 @@ Quit:     'ESC' key
 
 Install dependencies for your platform.
 
-### Mac:
+### Mac
 
 Install [Homebrew](https://brew.sh/) if you don't have it, then SDL2 and SDL2_image:
 ```bash
@@ -57,7 +57,7 @@ or
 ```
 depending on your Mac.
 
-### Windows:
+### Windows
 
 Setup clang compilation on Windows.  First, install MSYS from cmd.exe:
 ```bash
@@ -82,7 +82,7 @@ cd Sample
 ./bin-win-x86_64/hello-vt.exe
 ```
 
-### Linux:
+### Linux
 
 This was tested on Debian 11.3 and Ubuntu 24.04:
 
