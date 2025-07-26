@@ -628,7 +628,6 @@ void mainLoopSDL()
 
         running = processEventsSDL();
         renderFrameGL();
-        //resizeViewportSDL(); hack
         SDL_GL_SwapWindow(sdlWindow);
 
         // Don't exceed maximum framerate of 60 fps
