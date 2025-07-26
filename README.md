@@ -45,14 +45,15 @@ brew install SDL2_image
 
 Build and run:
 ```bash
+git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
 make
 cd Sample
-./bin-mac-x86_64/vtdemo
+./bin-mac-x86_64/hello-vt
 ```
 or
 ```bash
-./bin-mac-arm64/vtdemo
+./bin-mac-arm64/hello-vt
 ```
 depending on your Mac.
 
@@ -66,25 +67,28 @@ setx PATH "%PATH%C:\msys64\clang64\bin"
 Then run from MSYS2 CLANG64 shell:
 ```bash
 pacman -Syu
+pacman -S git
 pacman -S base-devel mingw-w64-clang-x86_64-toolchain
 pacman -S mingw-w64-clang-x86_64-SDL2
 pacman -S mingw-w64-clang-x86_64-SDL2_image
 ```
 
-Then to build and run:
+Then to build and run (also from MSYS2 CLANG64 shell):
 ```bash
+git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
 make
 cd Sample
-./bin-win-x86_64/vtdemo.exe
+./bin-win-x86_64/hello-vt.exe
 ```
 
 ### Linux:
 
-This was tested on Debian 11.3 and Ubuntu 24.04.  Install required build tools and libraries:
+This was tested on Debian 11.3 and Ubuntu 24.04:
 
 ```bash
 sudo apt update
+sudo apt install git
 sudo apt install build-essential clang
 sudo apt install libsdl2-dev libsdl2-image-dev
 sudo apt install chromium
@@ -93,10 +97,11 @@ cp /usr/lib/chromium/*.so hello-vt/deps/lib-linux
 
 Then to build and run:
 ```bash
+git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
 make
 cd Sample
-./bin-linux-x86_64/vtdemo
+./bin-linux-x86_64/hello-vt
 ```
 
 
