@@ -91,8 +91,6 @@ sudo apt update
 sudo apt install git
 sudo apt install build-essential clang
 sudo apt install libsdl2-dev libsdl2-image-dev
-sudo apt install chromium
-cp /usr/lib/chromium/*.so hello-vt/deps/lib-linux
 ```
 
 Then to build and run:
