@@ -32,173 +32,7 @@
 #include "linmath.h"
 #include "LibVT.h"
 
-//
-// TexRect rendering
-//
-GLuint texRectShader = 0;
-GLuint texRectTexture = 0;
-const char* texRectTexFilename = "texmap.png";
-GLuint texRectTexUnit = GL_TEXTURE0;
-GLuint texRectVBO = 0, texRectEBO = 0;
-
-// Vertex data for a rectangle
-const float texRectVertices[] = {
-    // position (x,y,z)    // texcoords (u,v)
-    -0.5f, -0.5f, -0.25f,   0.0f, 1.0f,
-     0.5f, -0.5f, -0.25f,   1.0f, 1.0f,
-     0.5f,  0.5f, -0.25f,   1.0f, 0.0f,
-    -0.5f,  0.5f, -0.25f,   0.0f, 0.0f
-};
-
-// Indices for two triangles forming a rectangle
-const unsigned int texRectIndices[] = {
-    0, 1, 2,
-    0, 2, 3
-};
-
-void checkShaderBuilt(const char* shader_name, GLenum status, GLuint shader)
-{
-    GLint success;
-    glGetShaderiv(shader, status, &success);
-    if (success)
-        printf("INFO: %s id %d build OK\n", shader_name, shader);
-    else
-        printf("ERROR: %s id %d build FAILED!\n", shader_name, shader);
-}
-
-void initTexRectShader()
-{
-    // Texture shader
-    const GLchar* vertex_source = R"(
-        attribute vec4 position;
-        attribute vec2 texcoord;
-        uniform mat4 modelview;
-        uniform mat4 projection;
-        varying vec3 v_color;
-        varying vec2 v_texcoord;
-        void main()
-        {
-            gl_Position = projection * modelview * vec4(position.xyz, 1.0);
-            v_color = position.xyz + vec3(0.5);
-            v_texcoord = texcoord;
-        }
-    )";
-
-    //gl_FragColor = texture2D(texsampler, v_texcoord); // texture
-    //gl_FragColor = vec4 (v_color, 1.0); // rainbow
-    //gl_FragColor = vec4 (1.0, 0.0, 0.0, 1.0); // red
-    const GLchar* fragment_source = R"(
-        precision mediump float;
-        varying vec3 v_color;
-        varying vec2 v_texcoord;
-        uniform sampler2D texsampler;
-        void main()
-        {
-            // gl_FragColor = vec4 (v_color, 1.0); // rainbow
-            gl_FragColor = texture2D(texsampler, v_texcoord); // texture
-        }
-    )";
-
-    // Create and compile vertex shader
-    GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_source, NULL);
-    glCompileShader(vertex_shader);
-    checkShaderBuilt("vertex_shader", GL_COMPILE_STATUS, vertex_shader);
-
-    // Create and compile fragment shader
-    GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_source, NULL);
-    glCompileShader(fragment_shader);
-    checkShaderBuilt("fragment_shader", GL_COMPILE_STATUS, fragment_shader);
-
-    // Link vertex and fragment shader into shader program and start using it
-    texRectShader = glCreateProgram();
-    glAttachShader(texRectShader, vertex_shader);
-    glAttachShader(texRectShader, fragment_shader);
-    glLinkProgram(texRectShader);
-    glUseProgram(texRectShader);
-
-    // Bind the texture sampler to texture unit 0
-    glUniform1i(glGetUniformLocation(texRectShader, "texsampler"), 0);
-}
-
-void updateModelViewProjTexRect(mat4x4 modelViewMat, mat4x4 projMat)
-{
-    glUseProgram(texRectShader);
-
-    GLint modelviewLoc = glGetUniformLocation(texRectShader, "modelview");
-    glUniformMatrix4fv(modelviewLoc, 1, GL_FALSE, (float*)modelViewMat);
-
-    GLint projectionLoc = glGetUniformLocation(texRectShader, "projection");
-    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, (float*)projMat);
-}
-
-void initTexRectTexture()
-{
-    SDL_Surface *image = IMG_Load(texRectTexFilename);
-
-    if (image)
-    {
-        int bitsPerPixel = image->format->BitsPerPixel;
-        printf ("INFO: %s (%dx%d, %d bits) load OK\n",
-            texRectTexFilename, image->w, image->h, bitsPerPixel);
-
-        // Determine GL texture format
-        GLint format = -1;
-        if (bitsPerPixel == 24)
-            format = GL_RGB;
-        else if (bitsPerPixel == 32)
-            format = GL_RGBA;
-
-        if (format != -1)
-        {
-            // Generate a GL texture object
-            glGenTextures(1, &texRectTexture);
-
-            // Bind GL texture
-            glActiveTexture(texRectTexUnit);
-            glBindTexture(GL_TEXTURE_2D, texRectTexture);
-
-            // Set the GL texture's wrapping and stretching properties
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-            // Copy SDL surface image to GL texture
-            glTexImage2D(GL_TEXTURE_2D, 0, format, image->w, image->h, 0,
-                         format, GL_UNSIGNED_BYTE, image->pixels);
-        }
-
-        SDL_FreeSurface (image);
-    }
-    else
-        printf("ERROR: Load %s failed, reason:%s\n", texRectTexFilename, IMG_GetError());
-
-}
-
-// Initialize TexRect geometry (two triangles forming a rectangle)
-void initTexRectGeometry()
-{
-    glGenBuffers(1, &texRectVBO);
-    glGenBuffers(1, &texRectEBO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, texRectVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(texRectVertices), texRectVertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, texRectEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(texRectIndices), texRectIndices, GL_STATIC_DRAW);
-}
-
-// Init texRect shaders, texture, and geometry
-void initTexRect()
-{
-    initTexRectShader();
-    initTexRectTexture();
-    initTexRectGeometry();
-}
-
+// Shared helper to setup vertex attributes for a quad (two triangles)
 void setupQuadVertexAttributes(GLuint shader, const char* posAttribName, const char* texAttribName)
 {
     GLint posAttrib = glGetAttribLocation(shader, posAttribName);
@@ -228,29 +62,8 @@ void setupQuadVertexAttributes(GLuint shader, const char* posAttribName, const c
                           texOffset);           // offset (skip 3 floats to get to texcoords)
 }
 
-void renderTexRect()
-{
-    glActiveTexture(GL_TEXTURE0);
-    glUseProgram(texRectShader);
-
-    glBindBuffer(GL_ARRAY_BUFFER, texRectVBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, texRectEBO);
-
-    setupQuadVertexAttributes(texRectShader, "position", "texcoord");
-
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-}
-
-void cleanupTexRect()
-{
-    glDeleteBuffers(1, &texRectVBO);
-    glDeleteBuffers(1, &texRectEBO);
-    glDeleteProgram(texRectShader);
-    glDeleteTextures(1, &texRectTexture);
-}
-
 //
-// Virtual Texture (VT) rendering
+// Virtual Texture (VT) rectangle rendering
 //
 GLuint vtReadbackShader = 0, vtRenderShader = 0;
 GLuint vtVBO = 0, vtEBO = 0;
@@ -359,6 +172,193 @@ void cleanupVT()
 }
 
 //
+// TexRect rendering - basic, non-virtual textured rectangle to show mixing VT with other textures
+//
+GLuint texRectShader = 0;
+GLuint texRectTexture = 0;
+const char* texRectTexFilename = "texmap.png";
+GLuint texRectTexUnit = GL_TEXTURE0;
+GLuint texRectVBO = 0, texRectEBO = 0;
+
+// Vertex data for a rectangle
+const float texRectVertices[] = {
+    // position (x,y,z)    // texcoords (u,v)
+    -0.5f, -0.5f, -0.25f,   0.0f, 1.0f,
+     0.5f, -0.5f, -0.25f,   1.0f, 1.0f,
+     0.5f,  0.5f, -0.25f,   1.0f, 0.0f,
+    -0.5f,  0.5f, -0.25f,   0.0f, 0.0f
+};
+
+// Indices for two triangles forming a rectangle
+const unsigned int texRectIndices[] = {
+    0, 1, 2,
+    0, 2, 3
+};
+
+void checkShaderBuilt(const char* shader_name, GLenum status, GLuint shader)
+{
+    GLint success;
+    glGetShaderiv(shader, status, &success);
+    if (success)
+        printf("INFO: %s id %d build OK\n", shader_name, shader);
+    else
+        printf("ERROR: %s id %d build FAILED!\n", shader_name, shader);
+}
+
+void initTexRectShader()
+{
+    // Texture shader
+    const GLchar* vertex_source = R"(
+        attribute vec4 position;
+        attribute vec2 texcoord;
+        uniform mat4 modelview;
+        uniform mat4 projection;
+        varying vec3 v_color;
+        varying vec2 v_texcoord;
+        void main()
+        {
+            gl_Position = projection * modelview * vec4(position.xyz, 1.0);
+            v_color = position.xyz + vec3(0.5);
+            v_texcoord = texcoord;
+        }
+    )";
+
+    // Shader debugging options:
+    //gl_FragColor = vec4 (v_color, 1.0); // rainbow
+    //gl_FragColor = vec4 (1.0, 0.0, 0.0, 1.0); // red
+    const GLchar* fragment_source = R"(
+        precision mediump float;
+        varying vec3 v_color;
+        varying vec2 v_texcoord;
+        uniform sampler2D texsampler;
+        void main()
+        {
+            gl_FragColor = texture2D(texsampler, v_texcoord);
+        }
+    )";
+
+    // Create and compile vertex shader
+    GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertex_shader, 1, &vertex_source, NULL);
+    glCompileShader(vertex_shader);
+    checkShaderBuilt("vertex_shader", GL_COMPILE_STATUS, vertex_shader);
+
+    // Create and compile fragment shader
+    GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragment_shader, 1, &fragment_source, NULL);
+    glCompileShader(fragment_shader);
+    checkShaderBuilt("fragment_shader", GL_COMPILE_STATUS, fragment_shader);
+
+    // Link vertex and fragment shader into shader program and start using it
+    texRectShader = glCreateProgram();
+    glAttachShader(texRectShader, vertex_shader);
+    glAttachShader(texRectShader, fragment_shader);
+    glLinkProgram(texRectShader);
+    glUseProgram(texRectShader);
+
+    // Bind the texture sampler to texture unit 0
+    glUniform1i(glGetUniformLocation(texRectShader, "texsampler"), 0);
+}
+
+void updateModelViewProjTexRect(mat4x4 modelViewMat, mat4x4 projMat)
+{
+    glUseProgram(texRectShader);
+
+    GLint modelviewLoc = glGetUniformLocation(texRectShader, "modelview");
+    glUniformMatrix4fv(modelviewLoc, 1, GL_FALSE, (float*)modelViewMat);
+
+    GLint projectionLoc = glGetUniformLocation(texRectShader, "projection");
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, (float*)projMat);
+}
+
+void initTexRectTexture()
+{
+    SDL_Surface *image = IMG_Load(texRectTexFilename);
+
+    if (image)
+    {
+        int bitsPerPixel = image->format->BitsPerPixel;
+        printf ("INFO: %s (%dx%d, %d bits) load OK\n",
+            texRectTexFilename, image->w, image->h, bitsPerPixel);
+
+        // Determine GL texture format
+        GLint format = -1;
+        if (bitsPerPixel == 24)
+            format = GL_RGB;
+        else if (bitsPerPixel == 32)
+            format = GL_RGBA;
+
+        if (format != -1)
+        {
+            // Generate a GL texture object
+            glGenTextures(1, &texRectTexture);
+
+            // Bind GL texture
+            glActiveTexture(texRectTexUnit);
+            glBindTexture(GL_TEXTURE_2D, texRectTexture);
+
+            // Set the GL texture's wrapping and stretching properties
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            // Copy SDL surface image to GL texture
+            glTexImage2D(GL_TEXTURE_2D, 0, format, image->w, image->h, 0,
+                         format, GL_UNSIGNED_BYTE, image->pixels);
+        }
+
+        SDL_FreeSurface (image);
+    }
+    else
+        printf("ERROR: Load %s failed, reason:%s\n", texRectTexFilename, IMG_GetError());
+
+}
+
+// Initialize TexRect geometry (two triangles forming a rectangle)
+void initTexRectGeometry()
+{
+    glGenBuffers(1, &texRectVBO);
+    glGenBuffers(1, &texRectEBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, texRectVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(texRectVertices), texRectVertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, texRectEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(texRectIndices), texRectIndices, GL_STATIC_DRAW);
+}
+
+// Init texRect shaders, texture, and geometry
+void initTexRect()
+{
+    initTexRectShader();
+    initTexRectTexture();
+    initTexRectGeometry();
+}
+
+void renderTexRect()
+{
+    glActiveTexture(GL_TEXTURE0);
+    glUseProgram(texRectShader);
+
+    glBindBuffer(GL_ARRAY_BUFFER, texRectVBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, texRectEBO);
+
+    setupQuadVertexAttributes(texRectShader, "position", "texcoord");
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+void cleanupTexRect()
+{
+    glDeleteBuffers(1, &texRectVBO);
+    glDeleteBuffers(1, &texRectEBO);
+    glDeleteProgram(texRectShader);
+    glDeleteTextures(1, &texRectTexture);
+}
+
+//
 // GLES
 //
 void initGL()
@@ -419,6 +419,7 @@ void updateModelViewProjCam()
     mat4x4_mul(viewMat, viewMat, camTransMat);
     mat4x4_dup(camModelViewMat, viewMat);
 
+    // For debugging:
     // printf("modelview:\n");
     // mat4x4_print(camModelViewMat);
     // printf("projection:\n");
