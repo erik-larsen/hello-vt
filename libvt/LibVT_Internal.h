@@ -1,10 +1,12 @@
 #pragma once
 #include <stdio.h>
 #include <stdarg.h>
+#include <math.h>
 #include <time.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <locale.h>
 
 #ifdef WIN32                // Windows
     #define PATH_SEPERATOR "\\"

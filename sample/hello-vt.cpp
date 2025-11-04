@@ -32,6 +32,13 @@
 #include "linmath.h"
 #include "LibVT.h"
 
+#if defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+    // Force ANGLE to use Metal backend on native macOS builds
+    // Fixes black screen issue on older Intel Macs (e.g., Mac Pro 2013 with AMD FirePro running Sonoma)
+    // where ANGLE defaults to OpenGL backend which doesn't render correctly
+    #define FORCE_ANGLE_METAL_BACKEND_ON_MAC SDL_setenv("ANGLE_DEFAULT_PLATFORM", "metal", 1)
+#endif
+
 // Shared helper to setup vertex attributes for a quad (two triangles)
 void setupQuadVertexAttributes(GLuint shader, const char* posAttribName, const char* texAttribName)
 {
@@ -519,6 +526,7 @@ SDL_GLContext sdlGLContext;
 void initSDL(int vpWidth, int vpHeight)
 {
     // Init SDL
+    FORCE_ANGLE_METAL_BACKEND_ON_MAC;
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     SDL_version version;
     SDL_GetVersion(&version);
