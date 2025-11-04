@@ -37,6 +37,8 @@
     // Fixes black screen issue on older Intel Macs (e.g., Mac Pro 2013 with AMD FirePro running Sonoma)
     // where ANGLE defaults to OpenGL backend which doesn't render correctly
     #define FORCE_ANGLE_METAL_BACKEND_ON_MAC SDL_setenv("ANGLE_DEFAULT_PLATFORM", "metal", 1)
+#else
+    #define FORCE_ANGLE_METAL_BACKEND_ON_MAC
 #endif
 
 // Shared helper to setup vertex attributes for a quad (two triangles)
