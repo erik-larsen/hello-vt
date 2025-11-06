@@ -153,7 +153,7 @@
  * @def     DYNAMIC_LOD_ADJUSTMENT
  * @brief   Turn this on to make LibVT dynamically adjust the mipmap lod bias to make the required tiles fit the physical page.  <br>
  * Note:    Affects quality <br>
- * Info:    Can be off if your scene fits anyway, turn it on to provide smooth degradation instead if dropping tiles randomly. Algorithm is a bit unstable. Requires that you pass vtGetBias() as value for the uniform "mip_bias" to the shaders (both!). <br>
+ * Info:    Can be off if your scene fits anyway, turn it on to provide smooth degradation instead if dropping tiles randomly. Algorithm is a bit unstable. Requires that you pass vtGetMipBias() as value for the uniform "mip_bias" to the shaders (both!). <br>
  * Values:  0 - 1
  */
 #define DYNAMIC_LOD_ADJUSTMENT  0

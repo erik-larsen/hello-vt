@@ -142,7 +142,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
         
         
         cgGLSetStateMatrixParameter(cgReadbackParamModelViewMatrix, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
-        cgSetParameter1f(cgReadbackParamMipBias, <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetBias</a>());
+        cgSetParameter1f(cgReadbackParamMipBias, <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetMipBias</a>());
         cgGLEnableTextureParameter(cgReadbackParamMipcalcTexture);  <span class="comment">// dont need Cg messing with texture units pls!</span>
         
         
@@ -165,7 +165,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
         
         
         cgGLSetStateMatrixParameter(cgRenderParamModelViewMatrix, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
-        cgSetParameter1f(cgRenderParamMipBias, <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetBias</a>());
+        cgSetParameter1f(cgRenderParamMipBias, <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetMipBias</a>());
         
         
         cgGLEnableTextureParameter(cgRenderParamPhysicalTexture);  <span class="comment">// dont need Cg messing with texture units pls!</span>

@@ -20,7 +20,7 @@
         - vtExtractNeededPages()
         - vtMapNewPages()
         - and then render with the renderVT shader.
-        Additionally pass the result of vtGetBias() to both shaders as value for "mip_bias" each frame if you have the dynamic lod adjustment turned on.
+        Additionally pass the result of vtGetMipBias() to both shaders as value for "mip_bias" each frame if you have the dynamic lod adjustment turned on.
     - At shutdown call vtShutdown()
 
 */
@@ -154,7 +154,7 @@ void renderVT()
     // Readback pass
     vtPrepareReadback();
     glUseProgram(vtReadbackShader);
-    glUniform1f(glGetUniformLocation(vtReadbackShader, "mip_bias"), vtGetBias());
+    glUniform1f(glGetUniformLocation(vtReadbackShader, "mip_bias"), vtGetMipBias());
     renderVTGeometry(vtReadbackShader);
     glUseProgram(0);
     vtPerformReadback();
@@ -165,7 +165,7 @@ void renderVT()
 
     // Render pass
     glUseProgram(vtRenderShader);
-    glUniform1f(glGetUniformLocation(vtRenderShader, "mip_bias"), vtGetBias());
+    glUniform1f(glGetUniformLocation(vtRenderShader, "mip_bias"), vtGetMipBias());
     renderVTGeometry(vtRenderShader);
     glUseProgram(0);
 }
@@ -348,7 +348,7 @@ void initTexRect()
 
 void renderTexRect()
 {
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(texRectTexUnit);
     glUseProgram(texRectShader);
 
     glBindBuffer(GL_ARRAY_BUFFER, texRectVBO);
@@ -357,6 +357,7 @@ void renderTexRect()
     setupQuadVertexAttributes(texRectShader, "position", "texcoord");
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glUseProgram(0);
 }
 
 void cleanupTexRect()

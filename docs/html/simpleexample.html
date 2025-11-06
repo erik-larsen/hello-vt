@@ -66,7 +66,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
  {
         <a class="code" href="_lib_v_t_8h.html#a7d4070be203c7f025f0ef21f7b0a49cc" title="Must be called every frame previous to rendering the virtual textured geometry for...">vtPrepareReadback</a>();
                 glUseProgram(readbackShader);
-                glUniform1f(glGetUniformLocation(readbackShader, <span class="stringliteral">&quot;mip_bias&quot;</span>), <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetBias</a>());
+                glUniform1f(glGetUniformLocation(readbackShader, <span class="stringliteral">&quot;mip_bias&quot;</span>), <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetMipBias</a>());
 
                         renderVirtualTexturedObjects();
 
@@ -81,7 +81,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 
         glUseProgram(renderVTShader);
-                glUniform1f(glGetUniformLocation(renderVTShader, <span class="stringliteral">&quot;mip_bias&quot;</span>), <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetBias</a>());
+                glUniform1f(glGetUniformLocation(renderVTShader, <span class="stringliteral">&quot;mip_bias&quot;</span>), <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetMipBias</a>());
                 renderVirtualTexturedObjects();
         glUseProgram(0);
 

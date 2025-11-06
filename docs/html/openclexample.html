@@ -115,7 +115,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
         
         
                 glUseProgram(combined); <span class="comment">// need to use the proper shader</span>
-                        glUniform1f(glGetUniformLocation(combined, <span class="stringliteral">&quot;mip_bias&quot;</span>), <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetBias</a>());
+                        glUniform1f(glGetUniformLocation(combined, <span class="stringliteral">&quot;mip_bias&quot;</span>), <a class="code" href="_lib_v_t_8h.html#af4e213c5d72893725a3490513b17c066" title="Provides the bias that should be used for the float bias for the uniform &amp;quot;mip_bias&amp;quot;...">vtGetMipBias</a>());
 
                         renderVirtualTexturedObjects();
 

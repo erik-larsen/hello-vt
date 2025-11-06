@@ -101,11 +101,11 @@ void        vtShutdown();
 bool        vtScan(const char *_tileDir, char * _pageExtension, uint8_t *_pageBorder, uint8_t *_mipChainLength, uint32_t *_pageDimension);
 
 /*!
- * @fn vtGetBias()
- * @brief Provides the bias that should be used for the float bias for the uniform "mip_bias" for both shaders.
+ * @fn vtGetMipBias()
+ * @brief Provides the mipmap lod bias that should be used for the uniform "mip_bias" for both shaders.
  * @return The bias to use as uniform for the shaders.
  */
-float        vtGetBias();
+float        vtGetMipBias();
 
 /*!
  * @mainpage LibVT Index Page
@@ -127,7 +127,7 @@ float        vtGetBias();
  * Call \link vtGetShaderPrelude() vtGetShaderPrelude() \endlink to obtain the prelude to prepend to the shaders and load the readback and renderVT shaders.<br>
  * When OpenGL is callable call \link vtPrepare() vtPrepare() \endlink and pass it the shader objects.<br>
  * Call  \link vtReshape() vtReshape() \endlink now with the screen width, height, as well as fov, nearplane and farplane (only imporant in readback reduction mode). This call must also be made every time any of these values change, i.e. at viewport resize time.<br>
- * Now in the renderloop, call \link vtPrepareReadback() vtPrepareReadback() \endlink, render with the readback shader, call \link vtPerformReadback() vtPerformReadback() \endlink, \link vtExtractNeededPages() vtExtractNeededPages() \endlink, \link vtMapNewPages() vtMapNewPages() \endlink, and then render with the renderVT shader. Additionally pass the result of \link vtGetBias() vtGetBias() \endlink to both shaders as value for "mip_bias" each frame if you have the dynamic lod adjustment turned on.<br>
+ * Now in the renderloop, call \link vtPrepareReadback() vtPrepareReadback() \endlink, render with the readback shader, call \link vtPerformReadback() vtPerformReadback() \endlink, \link vtExtractNeededPages() vtExtractNeededPages() \endlink, \link vtMapNewPages() vtMapNewPages() \endlink, and then render with the renderVT shader. Additionally pass the result of \link vtGetMipBias() vtGetMipBias() \endlink to both shaders as value for "mip_bias" each frame if you have the dynamic lod adjustment turned on.<br>
  * At shutdown call  \link vtShutdown() vtShutdown() \endlink<br><br>
  * \b EXAMPLES:<br>
  * \ref SimpleExample Simple LibVT usage example<br>
@@ -260,7 +260,7 @@ float        vtGetBias();
  * {
  *     vtPrepareReadback();
  *         glUseProgram(readbackShader);
- *         glUniform1f(glGetUniformLocation(readbackShader, "mip_bias"), vtGetBias());
+ *         glUniform1f(glGetUniformLocation(readbackShader, "mip_bias"), vtGetMipBias());
  *
  *             renderVirtualTexturedObjects();
  *
@@ -275,7 +275,7 @@ float        vtGetBias();
  *
  *
  *     glUseProgram(renderVTShader);
- *         glUniform1f(glGetUniformLocation(renderVTShader, "mip_bias"), vtGetBias());
+ *         glUniform1f(glGetUniformLocation(renderVTShader, "mip_bias"), vtGetMipBias());
  *         renderVirtualTexturedObjects();
  *     glUseProgram(0);
  *
