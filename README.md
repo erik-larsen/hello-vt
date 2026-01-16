@@ -16,7 +16,7 @@ Goals:
 
 - Supply a reference sample that demonstrates the LibVT calls necessary to load and render a virtual texture, while utilizing SDL for cross-platform windowing and event handling.
 
-
+Also, see [below](https://github.com/erik-larsen/hello-vt/edit/main/README.md#related-projects) for a comparison to [shlomnissan's virtual-textures](https://github.com/shlomnissan/virtual-textures), a similar project but written in modern C++ and OpenGL 4.1.
 
 ## Sample
 
@@ -140,3 +140,37 @@ For an overview of LibVT's multithreading implementation, see the [LibVT readme]
 
 - Erik Larsen (LibVT fork and sample app)
 - Julian Mayer (original LibVT author)
+
+## Related Projects
+
+Another concise, cross-platform virtual texturing project is [shlomnissan / virtual-textures](https://github.com/shlomnissan/virtual-textures).  Here are the pros and cons of each project:
+
+### hello-vt / libvt
+Pros:
+- Targets OpenGLES2 — runs on mobile, older hardware, WebGL (future goal)
+- C API library (LibVT prefix) — stable ABI, easy FFI, embeddable in any language
+- Clean separation between VT system and windowing/rendering — drop into existing projects
+- Makefile build — explicit, transparent, easy to translate to other build systems
+- Production-grade threading: dedicated persistent loader and decompressor threads with condition variables
+- Three-stage pipeline (disk I/O → decompress → GPU upload) allows overlapping work
+
+Cons:
+- Older C++ style — more verbose, harder to read for those used to modern C++
+- Manual dependency management via system packages (brew, apt, pacman)
+- Inherited complexity from 2010-era LibVT codebase
+- Less readable as a learning resource
+
+### virtual-textures
+Pros:
+- Modern C++23 — clean, expressive, idiomatic code
+- CMake + vcpkg — declarative dependencies, reproducible builds, single command setup
+- Excellent clarity — easy to follow end-to-end - better for learning
+- Modern OpenGL 4.1 with explicit mip calculation (dFdx/dFdy, textureGrad) - better if targeting desktop
+- Has async loading via std::jthread
+- Includes debug overlay (minimap showing page residency and feedback) - better for learning
+
+Cons:
+- Less modular: VT logic coupled to GLFW, ImGui, app-specific classes
+- Would require refactoring to extract and embed elsewhere
+- Spawns new thread per load request (overhead)
+- Requires OpenGL 4.1 — won't run on mobile/WebGL
