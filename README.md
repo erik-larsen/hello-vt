@@ -16,7 +16,7 @@ Goals:
 
 - Supply a reference sample that demonstrates the LibVT calls necessary to load and render a virtual texture, while utilizing SDL for cross-platform windowing and event handling.
 
-Also, see [below](https://github.com/erik-larsen/hello-vt/edit/main/README.md#related-projects) for a comparison to [shlomnissan's virtual-textures](https://github.com/shlomnissan/virtual-textures), a similar project but written in modern C++ and OpenGL 4.1.
+Also, see [below](https://github.com/erik-larsen/hello-vt/blob/main/README.md#related-projects) for a comparison to [shlomnissan's virtual-textures](https://github.com/shlomnissan/virtual-textures), a similar project but written in modern C++ and OpenGL 4.1.
 
 ## Sample
 
