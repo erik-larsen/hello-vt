@@ -118,10 +118,17 @@ void initVT()
 {
     // Initialize LibVT
 #ifdef __EMSCRIPTEN__
-    // Tiles are fetched from the web server. A root-absolute URL is used so it
-    // resolves correctly regardless of where the page itself is served from --
-    // serve.py exposes the sample/ directory as the web root.
-    vtInit("/uv-test-8kx8k", "png", 0, 6, 256);    // png tiles, no border, mipchain length 6, and 256x256 tiles
+    // Tiles are fetched from the web server. The tile store lives two directories
+    // above the page (page: <root>/bin/web/hello-vt.html, tiles: <root>/uv-test-8kx8k/),
+    // so resolve an absolute URL relative to the page location. This works both for
+    // a local dev server root and for subpath hosting like GitHub Pages project sites
+    // (https://user.github.io/hello-vt/...).
+    static char tileDir[1024];
+    EM_ASM({
+        stringToUTF8(new URL('../../uv-test-8kx8k', document.location.href).href, $0, $1);
+    }, tileDir, sizeof(tileDir));
+    printf("INFO: tile store URL: %s\n", tileDir);
+    vtInit(tileDir, "png", 0, 6, 256);             // png tiles, no border, mipchain length 6, and 256x256 tiles
 #else
     vtInit("./uv-test-8kx8k/", "png", 0, 6, 256);  // png tiles, no border, mipchain length 6, and 256x256 tiles
 #endif

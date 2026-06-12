@@ -138,6 +138,19 @@ Note: the page must be served *cross-origin isolated* (with
 pthreads require `SharedArrayBuffer`. The included `scripts/serve.py` does this;
 a plain `python3 -m http.server` will not work.
 
+#### Hosting on GitHub Pages
+
+GitHub Pages cannot send custom response headers, so the build embeds
+[coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker): a service
+worker that injects the COOP/COEP headers client-side (the first visit reloads
+once while it installs). To deploy, publish the contents of `sample/` — i.e.
+`bin/web/` (which includes `coi-serviceworker.min.js`) plus the `uv-test-8kx8k/`
+tile store — and open `bin/web/hello-vt.html`. The tile store URL is resolved
+relative to the page, so project-site subpaths (`https://user.github.io/repo/...`)
+work without changes. Caveat: the service-worker workaround does not function
+where service workers are unavailable (e.g. some private-browsing modes); the
+page shows an explanatory error in that case.
+
 ## Implementation
 
 Many virtual texturing implementations have been available in C, C++ and JS, using OpenGL, Direct3D, and WebGL.  However, for the purposes of this project they are either not well-documented, not minimal, not cross-platform, or not straightforward to build due to age (most date from 2010 or earlier).  Of note, [OpenSeaDragon](https://openseadragon.github.io/) is an excellent implementation of virtual texturing but is not a good fit for this project because it is not C++ and not minimal.

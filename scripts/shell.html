@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hello-vt — virtual texturing in WebGL</title>
+
+<!-- Must load FIRST. On hosts that can't set response headers (e.g. GitHub Pages)
+     this registers a service worker that injects the COOP/COEP headers required
+     for SharedArrayBuffer / pthreads, then reloads the page once. On servers that
+     already send the headers (scripts/serve.py) it does nothing. -->
+<script src="coi-serviceworker.min.js"></script>
+
+<style>
+  :root {
+    --bg:     #16181d;
+    --panel:  #1d2026;
+    --line:   #2c3038;
+    --ink:    #e8e6df;
+    --muted:  #8b8f98;
+    --accent: #e0a458;
+    --bad:    #d4756b;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 16px 40px;
+    gap: 18px;
+  }
+
+  header {
+    width: min(800px, 100%);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 12px;
+  }
+  header h1 {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  header h1 .tile { color: var(--accent); }
+  header p {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Canvas frame */
+  .frame {
+    width: min(800px, 100%);
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+  /* keep the app's 4:3 aspect while loading so nothing jumps */
+  .frame::before { content: ""; display: block; padding-top: 75%; }
+  canvas#canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+    outline: none;
+    background: #000;
+  }
+  canvas#canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+
+  /* Overlay: tile-grid loader, errors */
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 18px;
+    background: var(--panel);
+    text-align: center;
+    padding: 24px;
+  }
+  .overlay[hidden] { display: none; }
+
+  /* Signature: a mip-tile grid that fills in, echoing what the app itself does */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(4, 16px);
+    grid-template-rows: repeat(4, 16px);
+    gap: 3px;
+  }
+  .tiles span {
+    background: var(--line);
+    animation: tilein 1.6s infinite;
+  }
+  /* checkerboard-ish stagger */
+  .tiles span:nth-child(odd)        { animation-delay: .2s; }
+  .tiles span:nth-child(3n)         { animation-delay: .55s; }
+  .tiles span:nth-child(4n+2)       { animation-delay: .9s; }
+  .tiles span:nth-child(7n)         { animation-delay: 1.2s; }
+  @keyframes tilein {
+    0%, 100% { background: var(--line); }
+    50%      { background: var(--accent); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tiles span { animation: none; background: var(--accent); opacity: .5; }
+  }
+
+  #status {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    min-height: 1.2em;
+  }
+  .overlay.error .tiles span { animation: none; background: var(--bad); opacity: .35; }
+  .overlay.error h2 { font-size: 15px; color: var(--bad); font-family: var(--mono); }
+  .overlay.error p  { font-size: 13px; color: var(--muted); max-width: 46ch; line-height: 1.5; }
+  .overlay.error code { color: var(--ink); }
+
+  footer {
+    width: min(800px, 100%);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 600; }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover, footer a:focus-visible { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>hello<span class="tile">▦</span>vt</h1>
+  <p>an 8k×8k texture, streamed tile by tile over HTTP</p>
+</header>
+
+<div class="frame">
+  <!-- Emscripten/SDL render target. tabindex so the canvas can take keyboard focus
+       for the arrow-key panning without the page scrolling instead. -->
+  <canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+
+  <div class="overlay" id="overlay">
+    <div class="tiles" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div id="status" role="status">Preparing…</div>
+  </div>
+</div>
+
+<footer>
+  <span><b>zoom</b> wheel</span>
+  <span><b>pan</b> arrow keys</span>
+  <span><b>orbit</b> drag</span>
+  <span><b>reset</b> R</span>
+  <span style="margin-left:auto"><a href="https://github.com/erik-larsen/hello-vt">source</a></span>
+</footer>
+
+<script>
+  var overlayEl = document.getElementById('overlay');
+  var statusEl  = document.getElementById('status');
+
+  function showError(title, html) {
+    overlayEl.classList.add('error');
+    overlayEl.hidden = false;
+    overlayEl.innerHTML =
+      '<div class="tiles" aria-hidden="true">' + '<span></span>'.repeat(16) + '</div>' +
+      '<h2>' + title + '</h2><p>' + html + '</p>';
+  }
+
+  // --- Cross-origin isolation check -------------------------------------
+  // coi-serviceworker reloads the page once on first visit to apply the
+  // headers. If we are *still* not isolated after that, pthreads cannot work,
+  // so fail with an explanation instead of a cryptic wasm abort.
+  var reloadedByCOI = sessionStorage.getItem('coiReloadedBySelf');
+  if (!window.crossOriginIsolated) {
+    if (!reloadedByCOI) {
+      // First visit: the COI worker is about to reload us. Just label the wait.
+      sessionStorage.setItem('coiReloadedBySelf', '1');
+      statusEl.textContent = 'Enabling multithreading…';
+    } else {
+      showError('Multithreading unavailable',
+        'This demo needs <code>SharedArrayBuffer</code>, which requires cross-origin ' +
+        'isolation. The service-worker workaround did not take effect — this can happen ' +
+        'in private browsing windows or when service workers are disabled. ' +
+        'Try a regular window, or serve the page with COOP/COEP headers ' +
+        '(<code>scripts/serve.py</code>).');
+    }
+  }
+
+  // --- Emscripten module hooks -------------------------------------------
+  var Module = {
+    canvas: document.getElementById('canvas'),
+
+    setStatus: function (text) {
+      if (overlayEl.classList.contains('error')) return;
+      // emcc reports e.g. "Downloading data... (1234/5678)" — trim the noise
+      statusEl.textContent = text || '';
+    },
+
+    monitorRunDependencies: function (left) {
+      if (left > 0) Module.setStatus('Loading… (' + left + ' dependencies)');
+    },
+
+    onRuntimeInitialized: function () {
+      overlayEl.hidden = true;
+      Module.canvas.focus();
+    },
+
+    print:    function (t) { console.log(t); },
+    printErr: function (t) { console.error(t); },
+
+    onAbort: function (what) {
+      showError('Application crashed',
+        'The runtime aborted: <code>' + String(what) + '</code>. ' +
+        'See the browser console for details.');
+    }
+  };
+
+  Module.setStatus('Downloading…');
+
+  window.addEventListener('error', function (e) {
+    if (!overlayEl.hidden && !overlayEl.classList.contains('error'))
+      Module.setStatus('Error — see console');
+  });
+
+  // Keep arrow keys / space from scrolling the page while the canvas has focus.
+  Module.canvas.addEventListener('keydown', function (e) {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) !== -1)
+      e.preventDefault();
+  });
+</script>
+
+{{{ SCRIPT }}}
+
+</body>
+</html>
