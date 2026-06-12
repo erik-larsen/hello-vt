@@ -8,7 +8,10 @@
 #include <dirent.h>
 #include <locale.h>
 
-#ifdef WIN32                // Windows
+#ifdef __EMSCRIPTEN__       // Web
+    #define PATH_SEPERATOR "/"
+    #include <stdlib.h>
+#elif defined(WIN32)        // Windows
     #define PATH_SEPERATOR "\\"
 #elif defined(__APPLE__)    // Mac
     #include <fcntl.h>      // For F_GLOBAL_NOCACHE
@@ -28,14 +31,20 @@
 
 #include <thread>
 #define THREAD_ID static_cast<unsigned long long>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
-#if ENABLE_MT
+// Note: these must be included unconditionally; ENABLE_MT is defined in
+// LibVT_Config.h which is included further below, so testing it here always
+// yielded 0 and only worked when <thread> transitively included these headers.
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
-#endif
 
-#include <OpenGLES/GLES2/gl2.h>
-#include <OpenGLES/GLES2/gl2ext.h>
+#ifdef __EMSCRIPTEN__
+    #include <GLES2/gl2.h>
+    #include <GLES2/gl2ext.h>
+#else
+    #include <OpenGLES/GLES2/gl2.h>
+    #include <OpenGLES/GLES2/gl2ext.h>
+#endif
 #define glBindFramebufferEXT glBindFramebuffer
 #define GL_FRAMEBUFFER_EXT    GL_FRAMEBUFFER
 #define glDeleteFramebuffersEXT glDeleteFramebuffers

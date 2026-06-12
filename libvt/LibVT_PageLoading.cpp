@@ -3,6 +3,68 @@
 
 // TODO: Consolidate duplicate code blocks below
 
+#ifdef __EMSCRIPTEN__
+
+// On the web, tiles are fetched from the server via (same-origin) URLs instead of
+// being read from disk. We use *synchronous* emscripten_fetch(), which is legal
+// because all callers of these functions run on pthreads (web workers), never on
+// the browser main thread (see vtInitPageLoader below, which skips the main-thread
+// probing/precaching that the native build performs).
+
+#include <emscripten/fetch.h>
+#include <string.h>
+
+char vtFileExists(char *path)
+{
+    emscripten_fetch_attr_t attr;
+    emscripten_fetch_attr_init(&attr);
+    strcpy(attr.requestMethod, "HEAD");
+    attr.attributes = EMSCRIPTEN_FETCH_SYNCHRONOUS;
+
+    emscripten_fetch_t *fetch = emscripten_fetch(&attr, path);
+    char exists = (fetch && fetch->status == 200);
+    if (fetch)
+        emscripten_fetch_close(fetch);
+
+    printf("Thread %llu: URL %s: %s\n", THREAD_ID, exists ? "exists" : "does not exist", path);
+    return exists;
+}
+
+void * vtLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_size)
+{
+    emscripten_fetch_attr_t attr;
+    emscripten_fetch_attr_init(&attr);
+    strcpy(attr.requestMethod, "GET");
+    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_SYNCHRONOUS;
+
+    emscripten_fetch_t *fetch = emscripten_fetch(&attr, filePath);
+    if (!fetch || fetch->status != 200 || fetch->numBytes <= offset)
+    {
+        printf("Error: tried to load nonexisting URL: %s (HTTP status %d)\n", filePath, fetch ? fetch->status : -1);
+        if (fetch)
+            emscripten_fetch_close(fetch);
+        return NULL;
+    }
+
+    uint32_t fs = 0;
+    uint32_t *fsp = (file_size != NULL) ? file_size : &fs;
+
+    if (*fsp != 0)
+        *fsp = *fsp - offset;       // caller knows the expected size
+    else
+        *fsp = ((uint32_t) fetch->numBytes) - offset;
+
+    char *fileData = (char *) malloc(*fsp);
+    assert(fileData);
+    memcpy(fileData, fetch->data + offset, *fsp);
+
+    emscripten_fetch_close(fetch);
+
+    return fileData;
+}
+
+#else // native file I/O
+
 char vtFileExists(char *path)
 {
     FILE *f;
@@ -61,6 +123,8 @@ void * vtLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_si
 
     return fileData;
 }
+
+#endif // __EMSCRIPTEN__
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -319,6 +383,7 @@ void vtCachePages(queue<uint32_t> pagesToCache)
 
 void vtInitPageLoader(const char *_tileDir)
 {
+#ifndef __EMSCRIPTEN__
     // check the tile store
     char buf[255];
     for (uint8_t i = 0; i < 16; i++)
@@ -336,6 +401,14 @@ void vtInitPageLoader(const char *_tileDir)
             for (uint8_t y = 0; y < (vt.cfg.virtTexDimensionPages >> i); y++)
                 pagesToCache.push(MAKE_PAGE_INFO(i, x, y));
     vtCachePages(pagesToCache);
+#else
+    // On the web we cannot perform synchronous fetches on the browser main thread,
+    // so skip the tile store probing and the blocking precache. The resident pages
+    // pushed below are loaded asynchronously by the loader thread instead. If the
+    // tile store URL or config is wrong, tile fetches will 404 with errors logged
+    // to the console. (Note: with HIGHEST_MIP_LEVELS_TO_PRECACHE > HIGHEST_MIP_LEVELS_TO_KEEP
+    // some pages would not be precached on the web; both are 1 by default.)
+#endif
 
     // push the resident pages
     for (uint8_t i = vt.cfg.mipChainLength - HIGHEST_MIP_LEVELS_TO_KEEP; i < vt.cfg.mipChainLength; i++)

@@ -1,0 +1,56 @@
+# Emscripten / WebGL1 build for hello-vt
+#
+# Prerequisites: an activated emsdk (https://emscripten.org/docs/getting_started/downloads.html)
+#   git clone https://github.com/emscripten-core/emsdk.git
+#   cd emsdk && ./emsdk install latest && ./emsdk activate latest && source ./emsdk_env.sh
+#
+# Build:   make -f Makefile.emscripten
+# Run:     python3 scripts/serve.py    then open http://localhost:8000/bin/web/hello-vt.html
+#
+# Notes:
+# - libvt and the sample are compiled in one emcc invocation (no static lib needed).
+# - Tiles are NOT packaged into the build; they are fetched at runtime from the
+#   server (see vtLoadFile in libvt/LibVT_PageLoading.cpp). Only the small static
+#   background texture (texmap.png) is preloaded into MEMFS.
+# - pthreads require the page to be served cross-origin isolated (COOP/COEP
+#   headers); use scripts/serve.py, NOT a plain `python3 -m http.server`.
+
+SRC = $(wildcard libvt/*.cpp) $(wildcard sample/*.cpp)
+
+BIN_DIR = sample/bin/web
+TARGET  = $(BIN_DIR)/hello-vt.html
+
+OPT_DEBUG  = -O0 -g -sASSERTIONS=1
+OPT_NDEBUG = -DNDEBUG -O2
+OPT = $(OPT_NDEBUG)
+
+CFLAGS = -std=c++11 -Wall $(OPT) \
+	-pthread \
+	-Ilibvt -Ideps/include \
+	-sUSE_SDL=2 -sUSE_SDL_IMAGE=2 -sSDL2_IMAGE_FORMATS='["png"]'
+
+LDFLAGS = \
+	-pthread -sPTHREAD_POOL_SIZE=4 \
+	-sFETCH \
+	-sFULL_ES2 -sMIN_WEBGL_VERSION=1 -sMAX_WEBGL_VERSION=1 \
+	-sINITIAL_MEMORY=256MB \
+	-sEXIT_RUNTIME=0 \
+	--preload-file sample/texmap.png@texmap.png
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(BIN_DIR):
+	mkdir -p $@
+
+$(TARGET): $(SRC) | $(BIN_DIR)
+	emcc $(CFLAGS) $(SRC) $(LDFLAGS) -o $@
+	@echo
+	@echo BUILT: $@
+	@echo "Run:   python3 scripts/serve.py"
+	@echo "Open:  http://localhost:8000/bin/web/hello-vt.html"
+	@echo
+
+clean:
+	rm -rf $(BIN_DIR)

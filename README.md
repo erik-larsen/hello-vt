@@ -103,6 +103,41 @@ cd Sample
 ```
 
 
+### Web (Emscripten)
+
+Install and activate the [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html):
+
+```
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install latest
+./emsdk activate latest
+source ./emsdk_env.sh
+```
+
+Then build and run:
+
+```
+git clone https://github.com/erik-larsen/hello-vt.git
+cd hello-vt
+make -f Makefile.emscripten
+python3 scripts/serve.py
+```
+
+and open http://localhost:8000/bin/web/hello-vt.html in your browser.
+
+Unlike the native builds, the web build does not read tiles from disk. Tiles are
+fetched on demand from the web server via synchronous `emscripten_fetch()` calls
+made on the loader thread (a web worker), so the streaming pipeline is identical
+to the native build. Only the small static background texture is embedded in the
+preloaded data file.
+
+Note: the page must be served *cross-origin isolated* (with
+`Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp` headers), because Emscripten
+pthreads require `SharedArrayBuffer`. The included `scripts/serve.py` does this;
+a plain `python3 -m http.server` will not work.
+
 ## Implementation
 
 Many virtual texturing implementations have been available in C, C++ and JS, using OpenGL, Direct3D, and WebGL.  However, for the purposes of this project they are either not well-documented, not minimal, not cross-platform, or not straightforward to build due to age (most date from 2010 or earlier).  Of note, [OpenSeaDragon](https://openseadragon.github.io/) is an excellent implementation of virtual texturing but is not a good fit for this project because it is not C++ and not minimal.

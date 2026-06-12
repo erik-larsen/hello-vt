@@ -40,7 +40,13 @@ void vtPerformReadback()
     else if (READBACK_MODE_READ_PIXELS)
         glReadPixels(0, 0, vt.w, vt.h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer);
 #else
-    glReadPixels(0, 0, vt.w, vt.h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer);
+    #ifdef __EMSCRIPTEN__
+        // WebGL1 only guarantees GL_RGBA/GL_UNSIGNED_BYTE for glReadPixels (no EXT_read_format_bgra).
+        // The R<->B channel swap relative to the native path is undone in vtExtractNeededPages().
+        glReadPixels(0, 0, vt.w, vt.h, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+    #else
+        glReadPixels(0, 0, vt.w, vt.h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer);
+    #endif
 #endif
 
     if (READBACK_MODE_FBO)
@@ -120,7 +126,14 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 
         for (uint32_t x = 0; x < vt.w; x++)
         {
+#ifdef __EMSCRIPTEN__
+            // readback was GL_RGBA/GL_UNSIGNED_BYTE: swap bytes 0 and 2 to recover the
+            // BGRA byte layout (mip, y, x, status) that the extraction below expects
+            const uint32_t rawPixel = *(buffer + rows + x);
+            const uint32_t pixel = (rawPixel & 0xFF00FF00u) | ((rawPixel & 0x000000FFu) << 16) | ((rawPixel >> 16) & 0x000000FFu);
+#else
             const uint32_t pixel = *(buffer + rows + x);    // format: BGRA        mip, x, y, STATUS
+#endif
             const uint8_t mip = (LONG_MIP_CHAIN) ? BYTE1(pixel) & 0x0F : BYTE1(pixel);
             const uint8_t shift = (USE_MIPCALC_TEXTURE ? 0 : mip);
             const uint16_t y_coord = (LONG_MIP_CHAIN) ? ((BYTE2(pixel) | ((BYTE1(pixel) & 0xC0)) << 2) >> shift) : (BYTE2(pixel) >> shift);

@@ -32,6 +32,10 @@
 #include "linmath.h"
 #include "LibVT.h"
 
+#ifdef __EMSCRIPTEN__
+    #include <emscripten.h>
+#endif
+
 #if defined(__APPLE__) && !defined(__EMSCRIPTEN__)
     // Force ANGLE to use Metal backend on native macOS builds
     // Fixes black screen issue on older Intel Macs (e.g., Mac Pro 2013 with AMD FirePro running Sonoma)
@@ -113,7 +117,14 @@ void resizeViewportVT(int width, int height, float fov, float nearPlane, float f
 void initVT()
 {
     // Initialize LibVT
+#ifdef __EMSCRIPTEN__
+    // Tiles are fetched from the web server. A root-absolute URL is used so it
+    // resolves correctly regardless of where the page itself is served from --
+    // serve.py exposes the sample/ directory as the web root.
+    vtInit("/uv-test-8kx8k", "png", 0, 6, 256);    // png tiles, no border, mipchain length 6, and 256x256 tiles
+#else
     vtInit("./uv-test-8kx8k/", "png", 0, 6, 256);  // png tiles, no border, mipchain length 6, and 256x256 tiles
+#endif
 
     // Load the VT shaders
     vtLoadShaders(&vtReadbackShader, &vtRenderShader);
@@ -553,6 +564,13 @@ void initSDL(int vpWidth, int vpHeight)
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 
+#ifdef __EMSCRIPTEN__
+    // Make sure the WebGL context is created without antialiasing: the prepass
+    // encodes page IDs in pixel colors and MSAA resolve would corrupt them.
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
+#endif
+
     sdlWindow = SDL_CreateWindow(
         "hello-vt",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -632,6 +650,21 @@ bool processEventsSDL()
     return running;
 }
 
+#ifdef __EMSCRIPTEN__
+void mainLoopIterationEM()
+{
+    processEventsSDL(); // quitting is not applicable in the browser; ignore return value
+    renderFrameGL();
+    SDL_GL_SwapWindow(sdlWindow);
+}
+
+void mainLoopSDL()
+{
+    // The browser drives the frame loop via requestAnimationFrame (fps=0),
+    // which also caps the framerate to the display refresh rate.
+    emscripten_set_main_loop(mainLoopIterationEM, 0, 1);
+}
+#else
 void mainLoopSDL()
 {
     bool running = true;
@@ -650,6 +683,7 @@ void mainLoopSDL()
             SDL_Delay(minFrameTime - frameTime); // Make frame take minFrameTime
     }
 }
+#endif
 
 void cleanupSDL()
 {
