@@ -1,0 +1,65 @@
+name: Deploy to GitHub Pages
+
+# Builds the Emscripten/WebGL1 target and publishes it to GitHub Pages.
+# Generated artifacts (.wasm/.js/.data) never get committed to the repo --
+# they are built fresh here and uploaded straight to Pages, alongside the
+# committed tile store under sample/uv-test-8kx8k/.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # allow manual runs from the Actions tab
+
+# Allow this workflow to publish a Pages deployment.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; don't cancel an in-progress one mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.61
+          actions-cache-folder: emsdk-cache
+
+      - name: Build web target
+        run: emmake make -f Makefile.emscripten
+
+      - name: Verify build output
+        run: |
+          test -f sample/bin/web/hello-vt.html
+          test -f sample/bin/web/hello-vt.wasm
+          test -f sample/bin/web/hello-vt.data
+          test -f sample/bin/web/coi-serviceworker.min.js
+          test -d sample/uv-test-8kx8k
+
+      # Pages serves files from the repository root of the artifact, so the
+      # uploaded tree must keep the sample/bin/web/... and sample/uv-test-8kx8k/...
+      # layout the page-relative tile URL (../../uv-test-8kx8k) expects.
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: sample
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

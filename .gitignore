@@ -2,6 +2,8 @@
 *.def
 *.exp
 .DS_Store
+# Generated Emscripten build output (rebuilt by CI / `make -f Makefile.emscripten`)
+sample/bin/web/
 **/archive/
 **/settings.json
 compile_commands.json

@@ -143,13 +143,24 @@ a plain `python3 -m http.server` will not work.
 GitHub Pages cannot send custom response headers, so the build embeds
 [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker): a service
 worker that injects the COOP/COEP headers client-side (the first visit reloads
-once while it installs). To deploy, publish the contents of `sample/` — i.e.
-`bin/web/` (which includes `coi-serviceworker.min.js`) plus the `uv-test-8kx8k/`
-tile store — and open `bin/web/hello-vt.html`. The tile store URL is resolved
-relative to the page, so project-site subpaths (`https://user.github.io/repo/...`)
-work without changes. Caveat: the service-worker workaround does not function
-where service workers are unavailable (e.g. some private-browsing modes); the
-page shows an explanatory error in that case.
+once while it installs). The tile store URL is resolved relative to the page, so
+project-site subpaths (`https://user.github.io/repo/...`) work without changes.
+Caveat: the service-worker workaround does not function where service workers are
+unavailable (e.g. some private-browsing modes); the page shows an explanatory
+error in that case.
+
+The included workflow at `.github/workflows/deploy-pages.yml` builds the web
+target with Emscripten on every push to `main` and deploys it, so the generated
+`.wasm`/`.js`/`.data` files never need to be committed (they are gitignored). It
+uploads the whole `sample/` directory as the Pages artifact, which contains both
+the freshly built `bin/web/` and the committed `uv-test-8kx8k/` tile store. To
+enable it, set Settings → Pages → Build and deployment → Source to
+**GitHub Actions**; the demo then lives at
+`https://<user>.github.io/<repo>/bin/web/hello-vt.html`.
+
+(If you would rather not use Actions, you can instead set the Pages source to
+"Deploy from a branch" at the repository root and commit the built `bin/web/`
+output yourself; everything is then served from its repo path under `sample/`.)
 
 ## Implementation
 
