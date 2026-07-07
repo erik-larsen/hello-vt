@@ -216,6 +216,9 @@ void vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, c
     vt.real_h = _h;
     vt.w = _w >> PREPASS_RESOLUTION_REDUCTION_SHIFT;
     vt.h = _h >> PREPASS_RESOLUTION_REDUCTION_SHIFT;
+    #if DEBUG_LOG > 0
+        printf("VT readback buffer = %dx%d\n", vt.w, vt.h);
+    #endif    
     vt.fovInDegrees = fovInDegrees;
 
 #if !GL_ES_VERSION_2_0
@@ -272,10 +275,12 @@ void vtReshape(const uint16_t _w, const uint16_t _h, const float fovInDegrees, c
         updatePerspectiveMatrix(vt.projectionMatrix, fovInDegrees, (float)vt.w / (float)vt.h, nearPlane, farPlane);
 }
 
-float vtGetBias()
+float vtGetMipBias()
 {
+    float bias = vt.dynamicLodBias + vt.platformLodBias;
+
     if (MIPPED_PHYSTEX)
-        return vt.bias - 0.5f;
-    else
-        return vt.bias;
+        bias -= 0.5f;
+    
+    return bias;   
 }

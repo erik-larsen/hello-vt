@@ -350,20 +350,13 @@ void vtMapNewPages()
 
     if (DYNAMIC_LOD_ADJUSTMENT)
     {    // automatic LoD bias adjustment
-        // float std; // TODO: doing this here is a BUG
-
-        // if (MIPPED_PHYSTEX)
-        //     std = -0.5;
-        // else
-        //     std = 0.;
-
         int pageOverflow =    vt.necessaryPageCount + vt.cfg.residentPages - vt.cfg.physTexDimensionPages * vt.cfg.physTexDimensionPages;
 
         if (pageOverflow > -2.0f)
-            vt.bias += 0.1f;
+            vt.dynamicLodBias += 0.1f;
 
-        if (pageOverflow < -7.0f && vt.bias > 0.0f)
-            vt.bias -= 0.1f;
+        if (pageOverflow < -7.0f && vt.dynamicLodBias > 0.0f)
+            vt.dynamicLodBias -= 0.1f;
     }
 
 #ifdef DEBUG_ERASE_CACHED_PAGES_EVERY_FRAME

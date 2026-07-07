@@ -1,10 +1,12 @@
 #pragma once
 #include <stdio.h>
 #include <stdarg.h>
+#include <math.h>
 #include <time.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <locale.h>
 
 #ifdef WIN32                // Windows
     #define PATH_SEPERATOR "\\"
@@ -138,7 +140,8 @@ struct vtData
     storageInfo             textureStorageInfo[MAX_PHYS_TEX_DIMENSION_PAGES][MAX_PHYS_TEX_DIMENSION_PAGES];
 
     uint16_t                necessaryPageCount, newPageCount, missingPageCount;
-    float                   bias;
+    float                   dynamicLodBias;
+    float                   platformLodBias;
     uint32_t                *readbackBuffer, **pageTables;
     clock_t                 thisFrameClock;
     uint32_t                w, h, real_w, real_h;

@@ -1,5 +1,7 @@
 #include "LibVT_Internal.h"
 #include "LibVT.h"
+#include <algorithm>
+#include <cctype>
 
 // Prelude common to all VT shaders
 static const char* vtShaderPreludeTemplate = R"(
@@ -103,17 +105,11 @@ static const char* vtRenderFragGLSL = R"(
         return result;
     }
 
-    vec2 calculateVirtualTextureCoordinates()
-    {
-        vec4 pageTableEntry = texture2D(pageTableTexture, texcoord.xy, page_dimension_log2 + mip_bias) * 255.0; // samplePagetableOnce
-        return calculateCoordinatesFromSample(pageTableEntry);
-    }
-
     void main(void)
     {
-        vec2 coord = calculateVirtualTextureCoordinates();
-        vec4 vtex = texture2D(physicalTexture, coord);
-        gl_FragColor = vtex;
+        vec4 pageTableEntry = texture2D(pageTableTexture, texcoord.xy, page_dimension_log2 + mip_bias) * 255.0;
+        vec2 coord = calculateCoordinatesFromSample(pageTableEntry);
+        gl_FragColor = texture2D(physicalTexture, coord);
     }
 )";
 
@@ -189,10 +185,18 @@ char * vtGetShaderPrelude()
 
 void vtLoadShaders(GLuint* readbackShader, GLuint* renderVTShader)
 {
+    // Direct3D backends require additional -1.0 bias to match other renderers
+    const char* renderer = (const char*)glGetString(GL_RENDERER);
+    if (renderer) {
+        std::string rendererStr(renderer);
+        std::transform(rendererStr.begin(), rendererStr.end(), rendererStr.begin(), ::tolower);
+        if (rendererStr.find("direct3d") != std::string::npos)
+            vt.platformLodBias -= 1.0f;
+        printf("INFO: Detected renderer (%s), using LOD bias = %f\n", renderer, vt.platformLodBias);
+    } 
+
     char* prelude = vtGetShaderPrelude();
-
-      *readbackShader = vtLoadShadersWithPrelude(prelude, vtReadbackVertGLSL, vtReadbackFragGLSL);
-      *renderVTShader = vtLoadShadersWithPrelude(prelude, vtRenderVertGLSL, vtRenderFragGLSL);
-
+    *readbackShader = vtLoadShadersWithPrelude(prelude, vtReadbackVertGLSL, vtReadbackFragGLSL);
+    *renderVTShader = vtLoadShadersWithPrelude(prelude, vtRenderVertGLSL, vtRenderFragGLSL);
     free(prelude);
 }

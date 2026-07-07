@@ -20,7 +20,7 @@
         - vtExtractNeededPages()
         - vtMapNewPages()
         - and then render with the renderVT shader.
-        Additionally pass the result of vtGetBias() to both shaders as value for "mip_bias" each frame if you have the dynamic lod adjustment turned on.
+        Additionally pass the result of vtGetMipBias() to both shaders as value for "mip_bias" each frame if you have the dynamic lod adjustment turned on.
     - At shutdown call vtShutdown()
 
 */
@@ -31,6 +31,15 @@
 #include <SDL_opengles2.h>
 #include "linmath.h"
 #include "LibVT.h"
+
+#if defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+    // Force ANGLE to use Metal backend on native macOS builds
+    // Fixes black screen issue on older Intel Macs (e.g., Mac Pro 2013 with AMD FirePro running Sonoma)
+    // where ANGLE defaults to OpenGL backend which doesn't render correctly
+    #define FORCE_ANGLE_METAL_BACKEND_ON_MAC SDL_setenv("ANGLE_DEFAULT_PLATFORM", "metal", 1)
+#else
+    #define FORCE_ANGLE_METAL_BACKEND_ON_MAC
+#endif
 
 // Shared helper to setup vertex attributes for a quad (two triangles)
 void setupQuadVertexAttributes(GLuint shader, const char* posAttribName, const char* texAttribName)
@@ -145,7 +154,7 @@ void renderVT()
     // Readback pass
     vtPrepareReadback();
     glUseProgram(vtReadbackShader);
-    glUniform1f(glGetUniformLocation(vtReadbackShader, "mip_bias"), vtGetBias());
+    glUniform1f(glGetUniformLocation(vtReadbackShader, "mip_bias"), vtGetMipBias());
     renderVTGeometry(vtReadbackShader);
     glUseProgram(0);
     vtPerformReadback();
@@ -156,7 +165,7 @@ void renderVT()
 
     // Render pass
     glUseProgram(vtRenderShader);
-    glUniform1f(glGetUniformLocation(vtRenderShader, "mip_bias"), vtGetBias());
+    glUniform1f(glGetUniformLocation(vtRenderShader, "mip_bias"), vtGetMipBias());
     renderVTGeometry(vtRenderShader);
     glUseProgram(0);
 }
@@ -339,7 +348,7 @@ void initTexRect()
 
 void renderTexRect()
 {
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(texRectTexUnit);
     glUseProgram(texRectShader);
 
     glBindBuffer(GL_ARRAY_BUFFER, texRectVBO);
@@ -348,6 +357,7 @@ void renderTexRect()
     setupQuadVertexAttributes(texRectShader, "position", "texcoord");
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glUseProgram(0);
 }
 
 void cleanupTexRect()
@@ -519,6 +529,7 @@ SDL_GLContext sdlGLContext;
 void initSDL(int vpWidth, int vpHeight)
 {
     // Init SDL
+    FORCE_ANGLE_METAL_BACKEND_ON_MAC;
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     SDL_version version;
     SDL_GetVersion(&version);
