@@ -113,13 +113,13 @@ void vtLoadNeededPages()
     char imagePath[255];
 
 #if ENABLE_MT
-    const int limit = 1; // limit to 1 page load at a time
+    const int pageLimit = 1; // limit to 1 page load at a time
     while (!vt.shutdownThreads)
 #else
-    const int limit = 10;
+    const int pageLimit = 10; // limit to 10 pages loaded at a time
 #endif
     {
-        queue<uint32_t>    neededPages;
+        queue<uint32_t> neededPages;
         {    // lock
             LOCK(vt.neededPagesMutex)
 
@@ -131,11 +131,11 @@ void vtLoadNeededPages()
             #endif
 
             uint8_t i = 0;
-            while (!vt.neededPages.empty() && i < limit) // TODO: all this copying could use preallocation of necessary space (not only here)
+            while (!vt.neededPages.empty() && i < pageLimit) // TODO: all this copying could use preallocation of necessary space (not only here)
             {
                 neededPages.push(vt.neededPages.front());
                 vt.neededPages.pop_front();
-                i ++;
+                ++i;
             }
         }    // unlock
 
@@ -172,10 +172,10 @@ void vtLoadNeededPagesDecoupled()
 {
     char imagePath[255];
 
-    const int limit = 1;
+    const int pageLimit = 1; // limit to 1 page load at a time
     while (!vt.shutdownThreads)
     {
-        queue<uint32_t>    neededPages;
+        queue<uint32_t> neededPages;
         {    // lock
             LOCK(vt.neededPagesMutex)
 
@@ -186,12 +186,12 @@ void vtLoadNeededPagesDecoupled()
                     break;
             }
 
-            uint8_t i = 0;    // limit to 5 pages at once
-            while (!vt.neededPages.empty() && i < limit)
+            uint8_t i = 0;    
+            while (!vt.neededPages.empty() && i < pageLimit)
             {
                 neededPages.push(vt.neededPages.front());
                 vt.neededPages.pop_front();
-                i ++;
+                ++i;
             }
         }    // unlock
 
@@ -229,7 +229,7 @@ void vtLoadNeededPagesDecoupled()
 
 void vtDecompressNeededPagesDecoupled()
 {
-    const int limit = 5;
+    const int pageLimit = 5;  // limit to 5 pages at once
     while (!vt.shutdownThreads)
     {
         queue<uint32_t>    neededPages;
@@ -242,11 +242,11 @@ void vtDecompressNeededPagesDecoupled()
             if (vt.shutdownThreads)
                 break;
 
-            uint8_t i = 0;    // limit to 5 pages at once
-            while (!vt.newCompressedPages.empty() && i < limit)
+            uint8_t i = 0;   
+            while (!vt.newCompressedPages.empty() && i < pageLimit)
             {
                 neededPages.push(vt.newCompressedPages.front());vt.newCompressedPages.pop();
-                i ++;
+                ++i;
             }
         }    // unlock
 
