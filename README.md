@@ -49,11 +49,11 @@ git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
 make
 cd Sample
-./bin-mac-x86_64/hello-vt
+./bin/mac-x86_64/hello-vt
 ```
 or
 ```bash
-./bin-mac-arm64/hello-vt
+./bin/mac-arm64/hello-vt
 ```
 depending on your Mac.
 
@@ -79,7 +79,7 @@ git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
 make
 cd Sample
-./bin-win-x86_64/hello-vt.exe
+./bin/win-x86_64/hello-vt.exe
 ```
 
 ### Linux
@@ -99,7 +99,7 @@ git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
 make
 cd Sample
-./bin-linux-x86_64/hello-vt
+./bin/linux-x86_64/hello-vt
 ```
 
 
