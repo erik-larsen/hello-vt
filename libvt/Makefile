@@ -41,7 +41,7 @@ WARN = -Wall
 DEFS = $(OS_DEFS)
 OPT_DEBUG = -O0 -g
 OPT_NDEBUG = -DNDEBUG -O3
-OPT = $(OPT_DEBUG)
+OPT = $(OPT_NDEBUG)
 CFLAGS = -std=c++11 -pthread $(WARN) $(DEFS) $(OPT)
 AR = ar rvsc
 

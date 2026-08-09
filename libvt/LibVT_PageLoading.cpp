@@ -98,8 +98,6 @@ void * vtLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_si
 #endif
     assert(f);
 
-    size_t result;
-
     if (file_size != NULL)
         fsp = file_size;
 
@@ -116,8 +114,12 @@ void * vtLoadFile(const char *filePath, const uint32_t offset, uint32_t *file_si
     char *fileData = (char *) malloc(*fsp);
     assert(fileData);
 
-    result = fread(fileData, 1, *fsp, f);
-    assert(result == *fsp);
+    #ifdef DEBUG
+        size_t result = fread(fileData, 1, *fsp, f);
+        assert(result == *fsp);
+    #else
+        fread(fileData, 1, *fsp, f);
+    #endif
 
     fclose (f);
 

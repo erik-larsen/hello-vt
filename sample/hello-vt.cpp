@@ -497,7 +497,7 @@ void resizeViewportCam(int width, int height)
 void zoomCam(int mouseWheelY)
 {
     // Mouse wheel Y range is roughly -10 to 10
-    const float zoomSpeed = 0.05f;
+    const float zoomSpeed = 0.10f;
     float zoomScale = clamp(camScaleMat[0][0] + (mouseWheelY * zoomSpeed), 0.01f, 100.0f);
 
     // Zoom scaling
@@ -530,7 +530,7 @@ void rotateCam(int xrel, int yrel, int width, int height)
 
 void panCam(int x, int y)
 {
-    const float panSpeed = 0.01f;
+    const float panSpeed = 0.02f;
     float panX = -x * panSpeed;
     float panY = -y * panSpeed;
     mat4x4_translate_in_place(camTransMat, panX, panY, 0.0f);
