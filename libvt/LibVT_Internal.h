@@ -11,6 +11,7 @@
 #ifdef __EMSCRIPTEN__       // Web
     #define PATH_SEPERATOR "/"
     #include <stdlib.h>
+    #include <emscripten/emscripten.h>
 #elif defined(WIN32)        // Windows
     #define PATH_SEPERATOR "\\"
 #elif defined(__APPLE__)    // Mac

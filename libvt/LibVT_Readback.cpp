@@ -77,7 +77,15 @@ void vtPerformReadback()
 void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 {
     const uint32_t width = vt.w;
+#ifdef __EMSCRIPTEN__
+    // clock() returns -1 in the browser, which breaks the LRU slot search in
+    // vtMapNewPages() (no slot ever satisfies clockUsed < -1, so pages are
+    // never uploaded). Use Emscripten's monotonic timer instead; millisecond
+    // resolution is plenty since this only needs to order frames.
+    const clock_t clocks = vt.thisFrameClock = (clock_t)emscripten_get_now();
+#else
     const clock_t clocks = vt.thisFrameClock = clock();
+#endif
     queue<uint32_t>    tmpPages;
 
     map<uint32_t, uint16_t> tmpPages1;

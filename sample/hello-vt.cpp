@@ -660,7 +660,25 @@ bool processEventsSDL()
 #ifdef __EMSCRIPTEN__
 void mainLoopIterationEM()
 {
+    // The canvas is sized by CSS layout, which can settle after SDL window
+    // creation (0x0 at init) and change any time the page reflows — and SDL's
+    // Emscripten backend doesn't reliably deliver SDL_WINDOWEVENT_RESIZED for
+    // either. Poll the drawable size instead.
+    static int lastWidth = -1, lastHeight = -1;
+    int width, height;
+    SDL_GL_GetDrawableSize(sdlWindow, &width, &height);
+    if ((width != lastWidth || height != lastHeight) && width > 0 && height > 0)
+    {
+        lastWidth = width;
+        lastHeight = height;
+        resizeViewportCam(width, height);
+    }
+
     processEventsSDL(); // quitting is not applicable in the browser; ignore return value
+
+    if (width <= 0 || height <= 0)
+        return; // layout not settled yet; nothing sensible to render
+
     renderFrameGL();
     SDL_GL_SwapWindow(sdlWindow);
 }
