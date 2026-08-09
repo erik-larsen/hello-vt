@@ -12,7 +12,7 @@ Goals:
 
 - Provide a minimal example of virtual texturing to help in learning the algorithm and to serve as a building block for other projects.
 
-- Enable cross platform native builds on Mac, Windows, and Linux, and a future WebGL build via Emscripten.  To this end, C++ and OpenGLES were chosen from the start.
+- Enable cross platform native builds on Mac, Windows, and Linux, and a WebGL build via Emscripten.  To this end, C++ and OpenGLES were chosen from the start.
 
 - Supply a reference sample that demonstrates the LibVT calls necessary to load and render a virtual texture, while utilizing SDL for cross-platform windowing and event handling.
 
@@ -182,7 +182,7 @@ For an overview of LibVT's multithreading implementation, see the [LibVT readme]
 - [x] Multithreading (main, loader, and decompression threads)
 - [x] PNG sample
 - [ ] JPG sample
-- [ ] Emscripten build, with tiles from server
+- [x] Emscripten build, with tiles from server
 - [ ] Visualize virtual and physical textures for debugging
 - [ ] Auto configure LibVT based on input image
 
@@ -206,7 +206,7 @@ Another concise, cross-platform virtual texturing project is [shlomnissan / virt
 
 ### hello-vt / libvt
 Pros:
-- Targets OpenGLES2 — runs on mobile, older hardware, WebGL (future goal)
+- Targets OpenGLES2 — runs on mobile, older hardware, WebGL
 - C API library (LibVT prefix) — stable ABI, easy FFI, embeddable in any language
 - Clean separation between VT system and windowing/rendering — drop into existing projects
 - Makefile build — explicit, transparent, easy to translate to other build systems
