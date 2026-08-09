@@ -34,6 +34,7 @@
 
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
+    #include <emscripten/html5.h>
 #endif
 
 #if defined(__APPLE__) && !defined(__EMSCRIPTEN__)
@@ -634,7 +635,10 @@ bool processEventsSDL()
                 break;
 
             case SDL_WINDOWEVENT:
-                if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+                // SIZE_CHANGED covers all size changes, including SDL's Emscripten
+                // backend syncing the canvas to CSS layout; RESIZED only fires for
+                // external resizes and never comes from that sync.
+                if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
                     resizeViewportSDL();
                 break;
 
@@ -660,24 +664,24 @@ bool processEventsSDL()
 #ifdef __EMSCRIPTEN__
 void mainLoopIterationEM()
 {
-    // The canvas is sized by CSS layout, which can settle after SDL window
-    // creation (0x0 at init) and change any time the page reflows — and SDL's
-    // Emscripten backend doesn't reliably deliver SDL_WINDOWEVENT_RESIZED for
-    // either. Poll the drawable size instead.
-    static int lastWidth = -1, lastHeight = -1;
-    int width, height;
-    SDL_GL_GetDrawableSize(sdlWindow, &width, &height);
-    if ((width != lastWidth || height != lastHeight) && width > 0 && height > 0)
-    {
-        lastWidth = width;
-        lastHeight = height;
-        resizeViewportCam(width, height);
-    }
-
     processEventsSDL(); // quitting is not applicable in the browser; ignore return value
 
+    // The canvas is sized by CSS layout, which can settle after SDL window
+    // creation — the drawable is 0x0 until the first SIZE_CHANGED arrives.
+    int width, height;
+    SDL_GL_GetDrawableSize(sdlWindow, &width, &height);
     if (width <= 0 || height <= 0)
-        return; // layout not settled yet; nothing sensible to render
+    {
+        // SDL only re-reads the canvas CSS size from a browser *window* resize
+        // event, so if layout settled after SDL_CreateWindow nothing would ever
+        // deliver the real size. Push it through SDL ourselves; SDL emits
+        // SIZE_CHANGED and the normal resize path takes over.
+        double cssW = 0, cssH = 0;
+        emscripten_get_element_css_size("#canvas", &cssW, &cssH);
+        if (cssW > 0 && cssH > 0)
+            SDL_SetWindowSize(sdlWindow, (int)cssW, (int)cssH);
+        return; // nothing sensible to render yet
+    }
 
     renderFrameGL();
     SDL_GL_SwapWindow(sdlWindow);

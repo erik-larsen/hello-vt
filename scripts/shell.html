@@ -29,21 +29,24 @@
     background: var(--bg);
     color: var(--ink);
     font-family: var(--sans);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 28px 16px 40px;
-    gap: 18px;
+    overflow: hidden;
   }
 
+  /* Full-window canvas; header/footer float on top of it. Text stays readable
+     over arbitrary texture content via gradient scrims, and the bars are
+     click-through (pointer-events) so they never steal drag/wheel input —
+     only the source link re-enables hit testing. */
   header {
-    width: min(800px, 100%);
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 2;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 12px;
+    padding: 16px 20px 28px;
+    background: linear-gradient(rgba(13, 15, 19, .82), rgba(13, 15, 19, 0));
+    pointer-events: none;
   }
   header h1 {
     font-family: var(--mono);
@@ -60,13 +63,10 @@
 
   /* Canvas frame */
   .frame {
-    width: min(800px, 100%);
-    position: relative;
+    position: fixed;
+    inset: 0;
     background: var(--panel);
-    border: 1px solid var(--line);
   }
-  /* keep the app's 4:3 aspect while loading so nothing jumps */
-  .frame::before { content: ""; display: block; padding-top: 75%; }
   canvas#canvas {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -124,16 +124,21 @@
   .overlay.error code { color: var(--ink); }
 
   footer {
-    width: min(800px, 100%);
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 2;
     display: flex;
     flex-wrap: wrap;
     gap: 6px 22px;
+    padding: 28px 20px 14px;
     font-family: var(--mono);
     font-size: 12px;
     color: var(--muted);
+    background: linear-gradient(rgba(13, 15, 19, 0), rgba(13, 15, 19, .82));
+    pointer-events: none;
   }
   footer b { color: var(--ink); font-weight: 600; }
-  footer a { color: var(--accent); text-decoration: none; }
+  footer a { color: var(--accent); text-decoration: none; pointer-events: auto; }
   footer a:hover, footer a:focus-visible { text-decoration: underline; }
 </style>
 </head>
