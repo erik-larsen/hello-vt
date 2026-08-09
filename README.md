@@ -33,6 +33,11 @@ Quit:     'ESC' key
 
 ## Building and Running
 
+`make` builds everything: the libvt library, the native sample, and the web
+(Emscripten) target. `make clean` cleans all of them. The web target is skipped
+with a notice if the Emscripten SDK is not installed, so the native workflow
+works on its own — see [Web (Emscripten)](#web-emscripten) for the web setup.
+
 Install dependencies for your platform.
 
 ### Mac
@@ -48,7 +53,7 @@ Build and run:
 git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
 make
-cd Sample
+cd sample
 ./bin/mac-x86_64/hello-vt
 ```
 or
@@ -78,7 +83,7 @@ Then to build and run (also from MSYS2 CLANG64 shell):
 git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
 make
-cd Sample
+cd sample
 ./bin/win-x86_64/hello-vt.exe
 ```
 
@@ -98,7 +103,7 @@ Then to build and run:
 git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
 make
-cd Sample
+cd sample
 ./bin/linux-x86_64/hello-vt
 ```
 
@@ -120,11 +125,17 @@ Then build and run:
 ```
 git clone https://github.com/erik-larsen/hello-vt.git
 cd hello-vt
-make -f Makefile.emscripten
+make web
 python3 scripts/serve.py
 ```
 
 and open http://localhost:8000/bin/web/hello-vt.html in your browser.
+
+`make web` (also part of plain `make`) uses `emcc` from `PATH` if the SDK is
+activated; otherwise it tries to activate emsdk from `$EMSDK` (default
+`~/Github/emsdk`) automatically, e.g. `make web EMSDK=/path/to/emsdk`. The
+underlying makefile can also be invoked directly:
+`make -f Makefile.emscripten`.
 
 Unlike the native builds, the web build does not read tiles from disk. Tiles are
 fetched on demand from the web server via synchronous `emscripten_fetch()` calls

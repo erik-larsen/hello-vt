@@ -35,6 +35,7 @@ LDFLAGS = \
 	-sFULL_ES2 -sMIN_WEBGL_VERSION=1 -sMAX_WEBGL_VERSION=1 \
 	-sINITIAL_MEMORY=256MB \
 	-sEXIT_RUNTIME=0 \
+	-sMINIFY_HTML=0 \
 	--shell-file scripts/shell.html \
 	--preload-file sample/texmap.png@texmap.png
 
@@ -45,7 +46,7 @@ all: $(TARGET)
 $(BIN_DIR):
 	mkdir -p $@
 
-$(TARGET): $(SRC) scripts/shell.html | $(BIN_DIR)
+$(TARGET): $(SRC) scripts/shell.html Makefile.emscripten | $(BIN_DIR)
 	emcc $(CFLAGS) $(SRC) $(LDFLAGS) -o $@
 	cp scripts/coi-serviceworker.min.js $(BIN_DIR)/
 	@echo
