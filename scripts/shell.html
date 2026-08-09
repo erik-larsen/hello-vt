@@ -181,15 +181,27 @@
   }
 
   // --- Cross-origin isolation check -------------------------------------
-  // coi-serviceworker reloads the page once on first visit to apply the
-  // headers. If we are *still* not isolated after that, pthreads cannot work,
-  // so fail with an explanation instead of a cryptic wasm abort.
-  var reloadedByCOI = sessionStorage.getItem('coiReloadedBySelf');
+  // coi-serviceworker applies COOP/COEP headers and reloads the page once on
+  // first visit — but its reload only fires if the worker actually takes
+  // control of the page, which can race (register → activate → claim). So we
+  // drive the retry ourselves: wait for the worker to be ready, reload, and
+  // only give up after a couple of attempts.
   if (!window.crossOriginIsolated) {
-    if (!reloadedByCOI) {
-      // First visit: the COI worker is about to reload us. Just label the wait.
-      sessionStorage.setItem('coiReloadedBySelf', '1');
+    var coiAttempts = +(sessionStorage.getItem('coiReloadAttempts') || 0);
+    if (coiAttempts < 2 && 'serviceWorker' in navigator) {
+      sessionStorage.setItem('coiReloadAttempts', String(coiAttempts + 1));
       statusEl.textContent = 'Enabling multithreading…';
+      // Reload as soon as the COI worker is active; the 3s timer is a backstop
+      // in case .ready stalls. Guard so only one reload fires per load, and
+      // don't fight coi-serviceworker's own controllerchange reload.
+      var coiReloaded = false;
+      var coiReload = function () {
+        if (coiReloaded) return;
+        coiReloaded = true;
+        location.reload();
+      };
+      navigator.serviceWorker.ready.then(coiReload);
+      setTimeout(coiReload, 3000);
     } else {
       showError('Multithreading unavailable',
         'This demo needs <code>SharedArrayBuffer</code>, which requires cross-origin ' +
@@ -198,6 +210,8 @@
         'Try a regular window, or serve the page with COOP/COEP headers ' +
         '(<code>scripts/serve.py</code>).');
     }
+  } else {
+    sessionStorage.removeItem('coiReloadAttempts');
   }
 
   // --- Emscripten module hooks -------------------------------------------
