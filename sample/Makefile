@@ -101,7 +101,7 @@ $(BIN_DIR)/%.o: $(SRC_DIR)/%.cpp $(HDRS) | $(BIN_DIR)
 	$(CLANG) $(CFLAGS) $(PKG_INC) $(SDL_INC) $(GLES_INC) $(VT_INC) -c $< -o $@
 
 $(SAMPLE): $(OBJS) $(VT_LIB) | $(BIN_DIR)
-	$(CLANG) $(LD_FLAGS) $(OBJS) $(PKG_LIB_PATH) -L$(GLES_LIBS_PATH) $(SDL_LIBS) $(GLES_LIBS) $(VT_LIB) -o $@
+	$(CLANG) $(LD_FLAGS) $(OBJS) -L$(GLES_LIBS_PATH) $(PKG_LIB_PATH) $(SDL_LIBS) $(GLES_LIBS) $(VT_LIB) -o $@
 	$(call GLES_INSTALL)
 	@echo
 	@echo BUILT: $@
