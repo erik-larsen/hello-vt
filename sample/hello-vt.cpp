@@ -433,6 +433,7 @@ mat4x4 camRotMat;
 mat4x4 camTransMat;
 mat4x4 camModelViewMat;
 mat4x4 camProjMat;
+float panVelX = 0.0f, panVelY = 0.0f; // smoothed pan velocity, see updatePanCam()
 
 void updateModelViewProjCam()
 {
@@ -464,6 +465,7 @@ void resetViewCam()
     mat4x4_identity(camScaleMat);
     mat4x4_identity(camRotMat);
     mat4x4_identity(camTransMat);
+    panVelX = panVelY = 0.0f;
     updateModelViewProjCam();
 }
 
@@ -528,14 +530,45 @@ void rotateCam(int xrel, int yrel, int width, int height)
     updateModelViewProjCam();
 }
 
-void panCam(int x, int y)
+// Smooth continuous panning: held arrow keys set a target velocity each
+// frame, and the actual velocity eases toward it exponentially — quick
+// ramp-up, soft stop. dt-scaled so the pan rate is framerate-independent,
+// and divided by the zoom scale so the on-screen speed feels the same at
+// any zoom level.
+void updatePanCam()
 {
-    const float panSpeed = 0.02f;
-    float panX = -x * panSpeed;
-    float panY = -y * panSpeed;
+    static Uint32 lastTicks = 0;
+    Uint32 now = SDL_GetTicks();
+    float dt = (lastTicks == 0) ? 0.0f : (now - lastTicks) / 1000.0f;
+    lastTicks = now;
+    if (dt <= 0.0f)
+        return;
+    if (dt > 0.05f)
+        dt = 0.05f; // clamp hitches (tab switch, load stall) so the view can't jump
+
+    const Uint8* keyStates = SDL_GetKeyboardState(NULL);
+    float targetX = (float)(keyStates[SDL_SCANCODE_RIGHT] - keyStates[SDL_SCANCODE_LEFT]);
+    float targetY = (float)(keyStates[SDL_SCANCODE_UP]    - keyStates[SDL_SCANCODE_DOWN]);
+
+    const float easeTime = 0.08f; // seconds to reach ~63% of the target speed
+    float ease = 1.0f - expf(-dt / easeTime);
+    panVelX += (targetX - panVelX) * ease;
+    panVelY += (targetY - panVelY) * ease;
+
+    // Settled and no key held: skip the matrix churn
+    if (targetX == 0.0f && targetY == 0.0f &&
+        fabsf(panVelX) < 0.001f && fabsf(panVelY) < 0.001f)
+    {
+        panVelX = panVelY = 0.0f;
+        return;
+    }
+
+    const float panSpeed = 1.2f; // world units per second at zoom 1
+    float zoomScale = camScaleMat[0][0];
+    float panX = -panVelX * panSpeed * dt / zoomScale;
+    float panY = -panVelY * panSpeed * dt / zoomScale;
     mat4x4_translate_in_place(camTransMat, panX, panY, 0.0f);
 
-    // printf("INFO: pan = %f, %f\n", panX, panY);
     updateModelViewProjCam();
 }
 
@@ -622,15 +655,8 @@ bool processEventsSDL()
                     else if (keyStates[SDL_SCANCODE_R])
                         resetViewCam();
 
-                    // Continuous panning
-                    if (keyStates[SDL_SCANCODE_LEFT])
-                        panCam(-1, 0);
-                    if (keyStates[SDL_SCANCODE_RIGHT])
-                        panCam(1, 0);
-                    if (keyStates[SDL_SCANCODE_UP])
-                        panCam(0, 1);
-                    if (keyStates[SDL_SCANCODE_DOWN])
-                        panCam(0, -1);
+                    // Panning from held arrow keys is applied per frame in
+                    // updatePanCam(), not from discrete keydown events.
                 }
                 break;
 
@@ -683,6 +709,7 @@ void mainLoopIterationEM()
         return; // nothing sensible to render yet
     }
 
+    updatePanCam();
     renderFrameGL();
     SDL_GL_SwapWindow(sdlWindow);
 }
@@ -701,6 +728,7 @@ void mainLoopSDL()
         Uint32 frameStart = SDL_GetTicks(); // Get the start time of the frame
 
         running = processEventsSDL();
+        updatePanCam();
         renderFrameGL();
         SDL_GL_SwapWindow(sdlWindow);
 
