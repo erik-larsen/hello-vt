@@ -24,7 +24,7 @@ The sample shows rendering of a test virtual texture to a simple quad.  A tradit
 
 Controls:
 ```
-Zoom:     Mouse wheel
+Zoom:     Mouse wheel, or ',' / '.' keys
 Pan:      Arrow keys
 Orbit:    Left mouse button drag
 Reset:    'R' key
