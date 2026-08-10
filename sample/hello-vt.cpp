@@ -433,7 +433,12 @@ mat4x4 camRotMat;
 mat4x4 camTransMat;
 mat4x4 camModelViewMat;
 mat4x4 camProjMat;
-float panVelX = 0.0f, panVelY = 0.0f, zoomVel = 0.0f; // smoothed velocities, see updateCamFromKeys()
+// Smooth camera motion state, see updateCam()
+float panVelX = 0.0f, panVelY = 0.0f;         // pan velocity from held arrow keys
+float zoomLog = 0.0f, zoomLogTarget = 0.0f;   // log-space zoom, eased toward target
+float orbVelX = 0.0f, orbVelY = 0.0f;         // orbit velocity (drag pixels/second)
+float orbDragX = 0.0f, orbDragY = 0.0f;       // drag pixels accumulated this frame
+bool  orbDragging = false;
 
 void updateModelViewProjCam()
 {
@@ -465,7 +470,9 @@ void resetViewCam()
     mat4x4_identity(camScaleMat);
     mat4x4_identity(camRotMat);
     mat4x4_identity(camTransMat);
-    panVelX = panVelY = zoomVel = 0.0f;
+    panVelX = panVelY = 0.0f;
+    zoomLog = zoomLogTarget = 0.0f;
+    orbVelX = orbVelY = orbDragX = orbDragY = 0.0f;
     updateModelViewProjCam();
 }
 
@@ -496,21 +503,16 @@ void resizeViewportCam(int width, int height)
     resizeViewportVT(width, height, fov, nearPlane, farPlane);
 }
 
-void zoomCam(int mouseWheelY)
+void zoomCam(float mouseWheelY)
 {
-    // Mouse wheel Y range is roughly -10 to 10
-    const float zoomSpeed = 0.10f;
-    float zoomScale = clamp(camScaleMat[0][0] + (mouseWheelY * zoomSpeed), 0.01f, 100.0f);
-
-    // Zoom scaling
-    mat4x4_identity(camScaleMat);
-    mat4x4_scale_iso(camScaleMat, camScaleMat, zoomScale);
-
-    // printf("INFO: zoom = %f\n", zoomScale);
-    updateModelViewProjCam();
+    // Each wheel notch moves the zoom *target* multiplicatively; the actual
+    // scale glides toward it in updateCam(), so wheel zoom is smooth and a
+    // notch feels the same at any zoom level.
+    const float zoomStep = 0.18f; // ln(scale) per wheel notch, ~1.2x
+    zoomLogTarget = clamp(zoomLogTarget + mouseWheelY * zoomStep, logf(0.01f), logf(100.0f));
 }
 
-void rotateCam(int xrel, int yrel, int width, int height)
+void rotateCam(float xrel, float yrel)
 {
     const float sensitivity = 0.01f;
 
@@ -527,15 +529,19 @@ void rotateCam(int xrel, int yrel, int width, int height)
     mat4x4_mul(camRotMat, camRotMat, deltaRot);
 
     // printf("INFO: dragVec = %f, %f\n", dragVec[0], dragVec[1]);
-    updateModelViewProjCam();
 }
 
-// Smooth continuous pan (arrow keys) and zoom (,/. keys): held keys set a
-// target velocity each frame, and the actual velocity eases toward it
-// exponentially — quick ramp-up, soft stop. Steps are dt-scaled so the
-// rates are framerate-independent. Pan speed is divided by the zoom scale
-// and zoom is multiplicative, so both feel the same at any zoom level.
-void updateCamFromKeys()
+// Smooth continuous camera motion, applied once per frame:
+// - pan (held arrow keys): velocity eases toward the key direction — quick
+//   ramp-up, soft stop — and is divided by zoom so on-screen speed is
+//   constant at any zoom level.
+// - zoom (,/. keys and wheel): both move a log-space *target* that the
+//   actual scale glides toward, so key zoom ramps and stops softly and
+//   each wheel notch lands smoothly instead of stepping.
+// - orbit (left drag): 1:1 while dragging, with a velocity EMA tracking
+//   the drag; releasing mid-swipe keeps orbiting and decays to a stop.
+// Everything is dt-scaled so the feel is framerate-independent.
+void updateCam()
 {
     static Uint32 lastTicks = 0;
     Uint32 now = SDL_GetTicks();
@@ -551,22 +557,59 @@ void updateCamFromKeys()
     float targetY = (float)(keyStates[SDL_SCANCODE_UP]     - keyStates[SDL_SCANCODE_DOWN]);
     float targetZ = (float)(keyStates[SDL_SCANCODE_PERIOD] - keyStates[SDL_SCANCODE_COMMA]); // '.' in, ',' out
 
+    // Pan velocity eases toward the held-key direction
     const float easeTime = 0.08f; // seconds to reach ~63% of the target speed
     float ease = 1.0f - expf(-dt / easeTime);
     panVelX += (targetX - panVelX) * ease;
     panVelY += (targetY - panVelY) * ease;
-    zoomVel += (targetZ - zoomVel) * ease;
+    bool panActive = !(targetX == 0.0f && targetY == 0.0f &&
+                       fabsf(panVelX) < 0.001f && fabsf(panVelY) < 0.001f);
+    if (!panActive)
+        panVelX = panVelY = 0.0f;
 
-    // Settled and no key held: skip the matrix churn
-    if (targetX == 0.0f && targetY == 0.0f && targetZ == 0.0f &&
-        fabsf(panVelX) < 0.001f && fabsf(panVelY) < 0.001f && fabsf(zoomVel) < 0.001f)
-    {
-        panVelX = panVelY = zoomVel = 0.0f;
-        return;
-    }
-
+    // Held zoom keys move the target continuously; wheel bumps it in zoomCam()
     const float zoomRate = 1.2f; // ln(scale) per second, ~3.3x per second held
-    float zoomScale = clamp(camScaleMat[0][0] * expf(zoomVel * zoomRate * dt), 0.01f, 100.0f);
+    if (targetZ != 0.0f)
+        zoomLogTarget = clamp(zoomLogTarget + targetZ * zoomRate * dt, logf(0.01f), logf(100.0f));
+
+    // Actual zoom glides toward the target
+    const float zoomEase = 1.0f - expf(-dt / 0.12f);
+    float zoomDiff = zoomLogTarget - zoomLog;
+    bool zoomActive = fabsf(zoomDiff) > 0.0005f;
+    if (zoomActive)
+        zoomLog += zoomDiff * zoomEase;
+    else
+        zoomLog = zoomLogTarget;
+
+    // Orbit: apply drag 1:1 and track its velocity (50/50 EMA); after release
+    // keep orbiting with that velocity, decaying to a soft stop
+    bool orbActive = false;
+    if (orbDragging)
+    {
+        orbVelX = orbVelX * 0.5f + (orbDragX / dt) * 0.5f;
+        orbVelY = orbVelY * 0.5f + (orbDragY / dt) * 0.5f;
+        if (orbDragX != 0.0f || orbDragY != 0.0f)
+        {
+            rotateCam(orbDragX, orbDragY);
+            orbActive = true;
+        }
+        orbDragX = orbDragY = 0.0f;
+    }
+    else if (fabsf(orbVelX) > 2.0f || fabsf(orbVelY) > 2.0f)
+    {
+        rotateCam(orbVelX * dt, orbVelY * dt);
+        float decay = expf(-dt / 0.25f);
+        orbVelX *= decay;
+        orbVelY *= decay;
+        orbActive = true;
+    }
+    else
+        orbVelX = orbVelY = 0.0f;
+
+    if (!panActive && !zoomActive && !orbActive)
+        return; // fully settled: skip the matrix churn
+
+    float zoomScale = expf(zoomLog);
     mat4x4_identity(camScaleMat);
     mat4x4_scale_iso(camScaleMat, camScaleMat, zoomScale);
 
@@ -661,8 +704,8 @@ bool processEventsSDL()
                     else if (keyStates[SDL_SCANCODE_R])
                         resetViewCam();
 
-                    // Pan (arrows) and zoom (,/.) from held keys are applied
-                    // per frame in updateCamFromKeys(), not from keydown events.
+                    // Pan, zoom, and orbit are applied per frame in
+                    // updateCam(), not from discrete input events.
                 }
                 break;
 
@@ -675,16 +718,31 @@ bool processEventsSDL()
                 break;
 
             case SDL_MOUSEWHEEL:
-                // Zoom in/out with mousewheel
-                zoomCam(event.wheel.y);
+                // Zoom in/out with mousewheel (moves the smooth-zoom target)
+                zoomCam(event.wheel.preciseY);
+                break;
+
+            case SDL_MOUSEBUTTONDOWN:
+                if (event.button.button == SDL_BUTTON_LEFT)
+                {
+                    orbDragging = true;
+                    orbVelX = orbVelY = 0.0f; // grabbing stops any orbit glide
+                    orbDragX = orbDragY = 0.0f;
+                }
+                break;
+
+            case SDL_MOUSEBUTTONUP:
+                if (event.button.button == SDL_BUTTON_LEFT)
+                    orbDragging = false;
                 break;
 
             case SDL_MOUSEMOTION:
+                // Orbit drag pixels are accumulated here and applied (with
+                // velocity tracking for the release glide) in updateCam()
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
-                    int width, height;
-                    SDL_GL_GetDrawableSize(sdlWindow, &width, &height);
-                    rotateCam(event.motion.xrel, event.motion.yrel, width, height);
+                    orbDragX += (float)event.motion.xrel;
+                    orbDragY += (float)event.motion.yrel;
                 }
                 break;
         }
@@ -715,7 +773,7 @@ void mainLoopIterationEM()
         return; // nothing sensible to render yet
     }
 
-    updateCamFromKeys();
+    updateCam();
     renderFrameGL();
     SDL_GL_SwapWindow(sdlWindow);
 }
@@ -734,7 +792,7 @@ void mainLoopSDL()
         Uint32 frameStart = SDL_GetTicks(); // Get the start time of the frame
 
         running = processEventsSDL();
-        updateCamFromKeys();
+        updateCam();
         renderFrameGL();
         SDL_GL_SwapWindow(sdlWindow);
 
