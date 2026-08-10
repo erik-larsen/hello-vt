@@ -6,6 +6,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["scripts/serve.py"],
       "port": 8000
+    },
+    {
+      "name": "rigidbody-web",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8123", "-d", "/Users/larsens/Github/tkano-sdl2-gles2/web"],
+      "port": 8123
     }
   ]
 }
