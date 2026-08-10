@@ -613,7 +613,7 @@ void updateCam()
     mat4x4_identity(camScaleMat);
     mat4x4_scale_iso(camScaleMat, camScaleMat, zoomScale);
 
-    const float panSpeed = 1.2f; // world units per second at zoom 1
+    const float panSpeed = 1.5f; // world units per second at zoom 1
     float panX = -panVelX * panSpeed * dt / zoomScale;
     float panY = -panVelY * panSpeed * dt / zoomScale;
     mat4x4_translate_in_place(camTransMat, panX, panY, 0.0f);
