@@ -436,9 +436,20 @@ mat4x4 camProjMat;
 // Smooth camera motion state, see updateCam()
 float panVelX = 0.0f, panVelY = 0.0f;         // pan velocity from held arrow keys
 float zoomLog = 0.0f, zoomLogTarget = 0.0f;   // log-space zoom, eased toward target
-float orbVelX = 0.0f, orbVelY = 0.0f;         // orbit velocity (drag pixels/second)
-float orbDragX = 0.0f, orbDragY = 0.0f;       // drag pixels accumulated this frame
+float orbVelX = 0.0f, orbVelY = 0.0f;         // orbit velocity (drag points/second)
+float orbDragX = 0.0f, orbDragY = 0.0f;       // orbit drag points accumulated this frame
 bool  orbDragging = false;
+float panDragVelX = 0.0f, panDragVelY = 0.0f; // pan velocity (drag points/second)
+float panDragX = 0.0f, panDragY = 0.0f;       // pan drag points accumulated this frame
+bool  panDragging = false;
+// Touch state: one finger orbits, two-finger pinch zooms. Touch-synthesized
+// mouse events (which == SDL_TOUCH_MOUSEID) are ignored so a finger drag
+// isn't double-handled as a mouse drag.
+bool  fingerDown = false;
+SDL_FingerID fingerDownId = 0;
+bool  pinchZooming = false;
+// Window size in points (the mouse/finger coordinate space), set on resize
+int   winPointW = 1, winPointH = 1;
 
 void updateModelViewProjCam()
 {
@@ -448,7 +459,11 @@ void updateModelViewProjCam()
     // Translate camera back a bit from the origin
     mat4x4_translate_in_place(viewMat, 0.0f, 0.0f, -4.0f);
 
-    // Combine translation, rotation and scale
+    // Combine as view = T(-dist) * orbit * S(zoom) * T(pan): pan translates
+    // the model in its own plane (parallel to the virtual texture), and the
+    // orbit pivot stays at the view center — panning slides the texture
+    // under it. Screen-relative drag input is remapped into this model-space
+    // pan by panCamViewDelta().
     mat4x4_mul(viewMat, viewMat, camRotMat);
     mat4x4_mul(viewMat, viewMat, camScaleMat);
     mat4x4_mul(viewMat, viewMat, camTransMat);
@@ -473,6 +488,7 @@ void resetViewCam()
     panVelX = panVelY = 0.0f;
     zoomLog = zoomLogTarget = 0.0f;
     orbVelX = orbVelY = orbDragX = orbDragY = 0.0f;
+    panDragVelX = panDragVelY = panDragX = panDragY = 0.0f;
     updateModelViewProjCam();
 }
 
@@ -503,13 +519,18 @@ void resizeViewportCam(int width, int height)
     resizeViewportVT(width, height, fov, nearPlane, farPlane);
 }
 
+// Move the smooth-zoom *target* by a log-space delta; the actual scale glides
+// toward it in updateCam(), so zoom is smooth and a step feels the same at
+// any zoom level.
+void zoomCamDelta(float zoomLogDelta)
+{
+    zoomLogTarget = clamp(zoomLogTarget + zoomLogDelta, logf(0.01f), logf(100.0f));
+}
+
 void zoomCam(float mouseWheelY)
 {
-    // Each wheel notch moves the zoom *target* multiplicatively; the actual
-    // scale glides toward it in updateCam(), so wheel zoom is smooth and a
-    // notch feels the same at any zoom level.
     const float zoomStep = 0.18f; // ln(scale) per wheel notch, ~1.2x
-    zoomLogTarget = clamp(zoomLogTarget + mouseWheelY * zoomStep, logf(0.01f), logf(100.0f));
+    zoomCamDelta(mouseWheelY * zoomStep);
 }
 
 void rotateCam(float xrel, float yrel)
@@ -531,15 +552,41 @@ void rotateCam(float xrel, float yrel)
     // printf("INFO: dragVec = %f, %f\n", dragVec[0], dragVec[1]);
 }
 
+// Pan the model by a view-plane delta (world units): the screen-space
+// direction is remapped through the inverse orbit rotation (transpose, since
+// it is a pure rotation) and its z is dropped, so the translation stays in
+// the model's own plane — the pan slides parallel to the virtual texture at
+// any orbit angle, foreshortening naturally at steep tilts.
+void panCamViewDelta(float viewDX, float viewDY)
+{
+    float modelDX = camRotMat[0][0] * viewDX + camRotMat[0][1] * viewDY;
+    float modelDY = camRotMat[1][0] * viewDX + camRotMat[1][1] * viewDY;
+    mat4x4_translate_in_place(camTransMat, modelDX, modelDY, 0.0f);
+}
+
+// Pan by a drag delta in window points, so the grabbed content follows the
+// cursor: world units per point come from the visible world height at the
+// model plane (camera sits 4 units back with a 45 degree fov) over the
+// window height, divided by zoom.
+void panCam(float dxPoints, float dyPoints)
+{
+    const float visibleWorldHeight = 2.0f * 4.0f * tanf(45.0f * 0.5f * M_PI / 180.0f);
+    const float panDragGain = 1.3f; // drag pans 30% farther than 1:1 cursor tracking
+    float worldPerPoint = panDragGain * visibleWorldHeight / (float)winPointH / expf(zoomLog);
+    panCamViewDelta(dxPoints * worldPerPoint, -dyPoints * worldPerPoint);
+}
+
 // Smooth continuous camera motion, applied once per frame:
 // - pan (held arrow keys): velocity eases toward the key direction — quick
 //   ramp-up, soft stop — and is divided by zoom so on-screen speed is
 //   constant at any zoom level.
-// - zoom (,/. keys and wheel): both move a log-space *target* that the
-//   actual scale glides toward, so key zoom ramps and stops softly and
-//   each wheel notch lands smoothly instead of stepping.
-// - orbit (left drag): 1:1 while dragging, with a velocity EMA tracking
-//   the drag; releasing mid-swipe keeps orbiting and decays to a stop.
+// - zoom (,/. keys, wheel, and two-finger pinch): all move a log-space
+//   *target* that the actual scale glides toward, so key zoom ramps and
+//   stops softly and each wheel notch or pinch step lands smoothly.
+// - orbit (left drag / one-finger drag): 1:1 while dragging, with a
+//   velocity EMA tracking the drag; releasing mid-swipe keeps orbiting
+//   and decays to a stop.
+// - pan drag (right drag): same 1:1-plus-release-glide as orbit.
 // Everything is dt-scaled so the feel is framerate-independent.
 void updateCam()
 {
@@ -567,10 +614,11 @@ void updateCam()
     if (!panActive)
         panVelX = panVelY = 0.0f;
 
-    // Held zoom keys move the target continuously; wheel bumps it in zoomCam()
+    // Held zoom keys move the target continuously; wheel and pinch bump it
+    // from their input events
     const float zoomRate = 1.2f; // ln(scale) per second, ~3.3x per second held
     if (targetZ != 0.0f)
-        zoomLogTarget = clamp(zoomLogTarget + targetZ * zoomRate * dt, logf(0.01f), logf(100.0f));
+        zoomCamDelta(targetZ * zoomRate * dt);
 
     // Actual zoom glides toward the target
     const float zoomEase = 1.0f - expf(-dt / 0.12f);
@@ -582,9 +630,11 @@ void updateCam()
         zoomLog = zoomLogTarget;
 
     // Orbit: apply drag 1:1 and track its velocity (50/50 EMA); after release
-    // keep orbiting with that velocity, decaying to a soft stop
+    // keep orbiting with that velocity, decaying to a soft stop. Leftover
+    // drag is applied even if the button was already released, so a flick
+    // that starts and ends within one frame isn't lost.
     bool orbActive = false;
-    if (orbDragging)
+    if (orbDragging || orbDragX != 0.0f || orbDragY != 0.0f)
     {
         orbVelX = orbVelX * 0.5f + (orbDragX / dt) * 0.5f;
         orbVelY = orbVelY * 0.5f + (orbDragY / dt) * 0.5f;
@@ -606,17 +656,41 @@ void updateCam()
     else
         orbVelX = orbVelY = 0.0f;
 
-    if (!panActive && !zoomActive && !orbActive)
+    // Pan drag: same pattern as orbit — apply 1:1 with a velocity EMA while
+    // dragging, glide to a soft stop after release
+    bool panDragActive = false;
+    if (panDragging || panDragX != 0.0f || panDragY != 0.0f)
+    {
+        panDragVelX = panDragVelX * 0.5f + (panDragX / dt) * 0.5f;
+        panDragVelY = panDragVelY * 0.5f + (panDragY / dt) * 0.5f;
+        if (panDragX != 0.0f || panDragY != 0.0f)
+        {
+            panCam(panDragX, panDragY);
+            panDragActive = true;
+        }
+        panDragX = panDragY = 0.0f;
+    }
+    else if (fabsf(panDragVelX) > 2.0f || fabsf(panDragVelY) > 2.0f)
+    {
+        panCam(panDragVelX * dt, panDragVelY * dt);
+        float decay = expf(-dt / 0.25f);
+        panDragVelX *= decay;
+        panDragVelY *= decay;
+        panDragActive = true;
+    }
+    else
+        panDragVelX = panDragVelY = 0.0f;
+
+    if (!panActive && !zoomActive && !orbActive && !panDragActive)
         return; // fully settled: skip the matrix churn
 
     float zoomScale = expf(zoomLog);
     mat4x4_identity(camScaleMat);
     mat4x4_scale_iso(camScaleMat, camScaleMat, zoomScale);
 
-    const float panSpeed = 1.5f; // world units per second at zoom 1
-    float panX = -panVelX * panSpeed * dt / zoomScale;
-    float panY = -panVelY * panSpeed * dt / zoomScale;
-    mat4x4_translate_in_place(camTransMat, panX, panY, 0.0f);
+    const float panSpeed = 1.95f; // world units per second at zoom 1
+    panCamViewDelta(-panVelX * panSpeed * dt / zoomScale,
+                    -panVelY * panSpeed * dt / zoomScale);
 
     updateModelViewProjCam();
 }
@@ -676,6 +750,13 @@ void resizeViewportSDL()
     // Handle high DPI: get the window's drawable size (actual pixels)
     int vpWidth, vpHeight;
     SDL_GL_GetDrawableSize(sdlWindow, &vpWidth, &vpHeight);
+
+    // Window size in points is the mouse/finger coordinate space, used to
+    // convert drag deltas for panCam() and finger orbit
+    SDL_GetWindowSize(sdlWindow, &winPointW, &winPointH);
+    if (winPointW <= 0) winPointW = 1;
+    if (winPointH <= 0) winPointH = 1;
+
     resizeViewportCam(vpWidth, vpHeight);
 }
 
@@ -693,20 +774,20 @@ bool processEventsSDL()
                 break;
 
             case SDL_KEYDOWN:
-                {
-                    const Uint8* keyStates = SDL_GetKeyboardState(NULL);
+                // Use the event's own scancode, not SDL_GetKeyboardState():
+                // a quick tap can have its keyup already applied to the key
+                // state by the time this event is polled, losing the press.
 
-                    // Quit
-                    if (keyStates[SDL_SCANCODE_ESCAPE])
-                        running = false;
+                // Quit
+                if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
+                    running = false;
 
-                    // Reset view
-                    else if (keyStates[SDL_SCANCODE_R])
-                        resetViewCam();
+                // Reset view
+                else if (event.key.keysym.scancode == SDL_SCANCODE_R)
+                    resetViewCam();
 
-                    // Pan, zoom, and orbit are applied per frame in
-                    // updateCam(), not from discrete input events.
-                }
+                // Pan, zoom, and orbit are applied per frame in
+                // updateCam(), not from discrete input events.
                 break;
 
             case SDL_WINDOWEVENT:
@@ -723,26 +804,95 @@ bool processEventsSDL()
                 break;
 
             case SDL_MOUSEBUTTONDOWN:
+                if (event.button.which == SDL_TOUCH_MOUSEID)
+                    break; // touch is handled via the SDL_FINGER*/SDL_MULTIGESTURE events
                 if (event.button.button == SDL_BUTTON_LEFT)
                 {
                     orbDragging = true;
                     orbVelX = orbVelY = 0.0f; // grabbing stops any orbit glide
                     orbDragX = orbDragY = 0.0f;
                 }
+                else if (event.button.button == SDL_BUTTON_RIGHT)
+                {
+                    panDragging = true;
+                    panDragVelX = panDragVelY = 0.0f; // grabbing stops any pan glide
+                    panDragX = panDragY = 0.0f;
+                }
                 break;
 
             case SDL_MOUSEBUTTONUP:
+                if (event.button.which == SDL_TOUCH_MOUSEID)
+                    break;
                 if (event.button.button == SDL_BUTTON_LEFT)
                     orbDragging = false;
+                else if (event.button.button == SDL_BUTTON_RIGHT)
+                    panDragging = false;
                 break;
 
             case SDL_MOUSEMOTION:
-                // Orbit drag pixels are accumulated here and applied (with
-                // velocity tracking for the release glide) in updateCam()
+                if (event.motion.which == SDL_TOUCH_MOUSEID)
+                    break;
+                // Drag points are accumulated here and applied (with velocity
+                // tracking for the release glide) in updateCam()
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
                     orbDragX += (float)event.motion.xrel;
                     orbDragY += (float)event.motion.yrel;
+                }
+                if (event.motion.state & SDL_BUTTON_RMASK)
+                {
+                    panDragX += (float)event.motion.xrel;
+                    panDragY += (float)event.motion.yrel;
+                }
+                break;
+
+            case SDL_FINGERDOWN:
+                if (pinchZooming)
+                    break;
+                if (fingerDown)
+                {
+                    // A second finger means a pinch is starting: stop the
+                    // one-finger orbit and let SDL_MULTIGESTURE take over
+                    fingerDown = false;
+                    orbDragging = false;
+                    orbVelX = orbVelY = orbDragX = orbDragY = 0.0f;
+                }
+                else
+                {
+                    fingerDown = true;
+                    fingerDownId = event.tfinger.fingerId;
+                    orbDragging = true;
+                    orbVelX = orbVelY = 0.0f; // grabbing stops any orbit glide
+                    orbDragX = orbDragY = 0.0f;
+                }
+                break;
+
+            case SDL_FINGERMOTION:
+                // One-finger orbit; finger deltas are normalized [0..1] so
+                // scale them to window points to match mouse-drag sensitivity
+                if (fingerDown && event.tfinger.fingerId == fingerDownId)
+                {
+                    orbDragX += event.tfinger.dx * (float)winPointW;
+                    orbDragY += event.tfinger.dy * (float)winPointH;
+                }
+                break;
+
+            case SDL_FINGERUP:
+                fingerDown = false;
+                pinchZooming = false;
+                orbDragging = false; // released mid-swipe: the orbit glide takes over
+                break;
+
+            case SDL_MULTIGESTURE:
+                // Two-finger pinch moves the smooth-zoom target, like the wheel
+                if (event.mgesture.numFingers == 2 && fabsf(event.mgesture.dDist) >= 0.001f)
+                {
+                    pinchZooming = true;
+                    fingerDown = false;
+                    orbDragging = false;
+                    orbVelX = orbVelY = orbDragX = orbDragY = 0.0f;
+                    const float pinchZoomScale = 3.0f; // ln(scale) per unit of normalized pinch distance
+                    zoomCamDelta(event.mgesture.dDist * pinchZoomScale);
                 }
                 break;
         }
