@@ -88,8 +88,8 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 #endif
     queue<uint32_t>    tmpPages;
 
-    map<uint32_t, uint16_t> tmpPages1;
-    multimap<uint32_t, uint32_t> tmpPages2;
+    map<uint32_t, uint32_t> tmpPages1;      // page -> pixels needing it, can be more than 65535 at large readback sizes
+    multimap<uint64_t, uint32_t> tmpPages2;
 
     const uint32_t *buffer;
 
@@ -121,6 +121,25 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
             uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
             uint8_t mip = EXTRACT_MIP(pageInfo);
             *((uint8_t *)&PAGE_TABLE(mip, x_coord, y_coord)) = kTableFree;
+        }
+
+        // likewise free pages that failed to load once they have waited long enough, so they are retried if still necessary
+        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+        for (map<uint32_t, std::chrono::steady_clock::time_point>::iterator failed = vt.failedPages.begin(); failed != vt.failedPages.end();)
+        {
+            if (now - failed->second < std::chrono::milliseconds(FAILED_PAGE_RETRY_MS))
+            {
+                ++failed;
+                continue;
+            }
+
+            const uint32_t pageInfo = failed->first;
+            uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
+            uint8_t mip = EXTRACT_MIP(pageInfo);
+            if ((uint8_t) PAGE_TABLE(mip, x_coord, y_coord) == kTableMappingInProgress)
+                *((uint8_t *)&PAGE_TABLE(mip, x_coord, y_coord)) = kTableFree;
+
+            vt.failedPages.erase(failed++);
         }
     }    // unlock
 
@@ -226,15 +245,15 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 ///*2*/        l.unique();
 ///*2*/        printf("%i \n", (int)l.size());
 
-    map<uint32_t, uint16_t>::iterator tmpPagesIter1;
-    multimap<uint32_t, uint32_t>::reverse_iterator tmpPagesIter2;
+    map<uint32_t, uint32_t>::iterator tmpPagesIter1;
+    multimap<uint64_t, uint32_t>::reverse_iterator tmpPagesIter2;
 
 ///*1*/    printf("NEWFRAME\n\n");
 ///*1*/    for (tmpPagesIter1 = bla.begin(); tmpPagesIter1 != bla.end(); ++tmpPagesIter1)
 ///*1*/    printf("PAGE: %i %i\n", tmpPagesIter1->first, tmpPagesIter1->second);
 
     for (tmpPagesIter1 = tmpPages1.begin(); tmpPagesIter1 != tmpPages1.end(); ++tmpPagesIter1) // pages sorting by importance: coarsest mip first, then most pixels
-        tmpPages2.insert(pair<uint32_t, uint32_t>((EXTRACT_MIP(tmpPagesIter1->first) << 16) | tmpPagesIter1->second, tmpPagesIter1->first));
+        tmpPages2.insert(pair<uint64_t, uint32_t>(((uint64_t) EXTRACT_MIP(tmpPagesIter1->first) << 32) | tmpPagesIter1->second, tmpPagesIter1->first));
     for (tmpPagesIter2 = tmpPages2.rbegin(); tmpPagesIter2 != tmpPages2.rend(); ++tmpPagesIter2)
         tmpPages.push(tmpPagesIter2->second);
 
@@ -262,7 +281,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
             {
                 const uint32_t pageInfo = nonCachedPages.front();nonCachedPages.pop();
 
-                if (vt.loadingPages.count(pageInfo)) // a loader thread already has it, it stays marked as mapping in progress
+                if (vt.loadingPages.count(pageInfo) || vt.failedPages.count(pageInfo)) // a loader thread already has it, or it is waiting to be retried: it stays marked as mapping in progress
                     continue;
 
                 vt.neededPages.push_back(pageInfo);

@@ -39,7 +39,7 @@ One-at-a-time access to the `neededPages` queue. Main thread produces requests (
 * **Who uses it**:
   * **Producer (Main Thread)**: When the main thread renders a frame, it identifies missing pages and `push_back`s them into the `neededPages` queue. It must lock this mutex to do so.
   * **Consumer (Background Thread)**: The `vtLoadNeededPages` function (running in a background thread) locks this mutex to safely check if the queue is empty and to `pop_front` page requests to begin loading them.
-* **Also protects**: The `loadingPages` set, the pages a loader thread has taken from `neededPages` but not yet put in the in-memory page cache. The main thread skips these when it rebuilds `neededPages`, so no page is fetched twice.
+* **Also protects**: The `loadingPages` set, the pages a loader thread has taken from `neededPages` but not yet put in the in-memory page cache. The main thread skips these when it rebuilds `neededPages`, so no page is fetched twice. Likewise the `failedPages` map, pages that failed to load or decode: the main thread frees them for another try once `FAILED_PAGE_RETRY_MS` has passed.
 * **Why it's needed**: Without it, the main thread could be adding a page to the queue at the exact same moment the background thread is trying to remove one, corrupting the queue's internal state.
 
 #### 2. **`neededPagesAvailableCondition`**

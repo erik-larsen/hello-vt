@@ -188,6 +188,15 @@
 #endif
 
 /*!
+ * @def     FAILED_PAGE_RETRY_MS
+ * @brief   How long a page that failed to load or decode waits before it is requested again, if it is still needed <br>
+ * Note:    Affects robustness <br>
+ * Info:    A dropped request on the web would otherwise leave its page missing until the app restarts. The wait keeps a page that is truly missing from being requested every frame. <br>
+ * Values:  0 - 10000
+ */
+#define FAILED_PAGE_RETRY_MS    1000
+
+/*!
  * @def     FALLBACK_ENTRIES
  * @brief   Writes fallback entries in the page table so no looping in the pixel shader is necessary. Trades pixel shader cost with page table management & traffic cost. <br>
  * Note:    Affects performance, turning this off is SLOWER <br>

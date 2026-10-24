@@ -30,6 +30,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <chrono>
 
 #include <thread>
 #define THREAD_ID static_cast<unsigned long long>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
@@ -160,6 +161,7 @@ struct vtData
     double                  fovInDegrees;
     deque<uint32_t>         neededPages;
     set<uint32_t>           loadingPages;   // taken from neededPages by a loader but not yet in the RAM cache, guarded by neededPagesMutex
+    map<uint32_t, std::chrono::steady_clock::time_point> failedPages;   // failed to load or decode, and when, guarded by neededPagesMutex
     queue<uint32_t>         newPages;
     map<uint32_t, void *>   cachedPages;
     map<uint32_t, clock_t>  cachedPagesAccessTimes;

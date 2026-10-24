@@ -140,15 +140,32 @@ void * vtDecompressImageBuffer(const void *file_data, uint32_t file_size, uint32
     int width, height, bitdepth;
     void * image_data = stbi_load_from_memory((const stbi_uc *)file_data, file_size, &width, &height, &bitdepth, STBI_rgb);
 
-    // verify image
-    assert(image_data);
+    // verify image, a page that fails here is treated like one that failed to load
+    if (!image_data)
+    {
+        printf("Error: could not decode page image: %s\n", stbi_failure_reason());
+        return NULL;
+    }
 
     if (*pic_size == 0)
         *pic_size = width;
-    else
-        assert(((uint32_t)width == *pic_size) && ((uint32_t)height == *pic_size));
+    else if (((uint32_t)width != *pic_size) || ((uint32_t)height != *pic_size))
+    {
+        printf("Error: page image is %ix%i, expected %ux%u\n", width, height, *pic_size, *pic_size);
+        stbi_image_free(image_data);
+        return NULL;
+    }
 
     return image_data;
+}
+
+// Called by the loading threads when a page could not be loaded or decoded. The page stays marked
+// as mapping in progress until vtExtractNeededPages() frees it for another try after FAILED_PAGE_RETRY_MS.
+static void vtPageLoadFailed(uint32_t pageInfo)
+{
+    LOCK(vt.neededPagesMutex)
+    vt.loadingPages.erase(pageInfo);
+    vt.failedPages[pageInfo] = std::chrono::steady_clock::now();
 }
 
 void * vtDecompressImageFile(const char *imagePath, uint32_t *pic_size)
@@ -170,7 +187,10 @@ void * vtDecompressImageFile(const char *imagePath, uint32_t *pic_size)
         return image_data;
     }
     else
+    {
+        free(file_data);
         return NULL;
+    }
 }
 
 #if ENABLE_MT < 2
@@ -222,6 +242,11 @@ void vtLoadNeededPages()
                 #endif
 
                 void *image_data = vtDecompressImageFile(imagePath, &vt.cfg.pageDimension);
+                if (!image_data)
+                {
+                    vtPageLoadFailed(pageInfo);
+                    continue;
+                }
 
                 vtInsertPageIntoCacheLOCK(pageInfo, image_data);
             }
@@ -296,6 +321,10 @@ void vtLoadNeededPagesDecoupled()
                     vt.compressedPagesAvailableCondition.notify_one();
                     continue; // still loading until the decompressor has cached it
                 }    // unlock
+
+                free(file_data);
+                vtPageLoadFailed(pageInfo);
+                continue;
             }
 
             {    // lock
@@ -332,20 +361,24 @@ void vtDecompressNeededPagesDecoupled()
         while (!neededPages.empty())
         {
             const uint32_t pageInfo = neededPages.front();neededPages.pop();
-            void *file_data;
-            uint32_t size;
+            void *file_data = NULL;
+            uint32_t size = 0;
 
             {    // lock
                 LOCK(vt.compressedMutex)
 
-                file_data = vt.compressedPages.find(pageInfo)->second;
-                size = vt.compressedPagesSizes.find(pageInfo)->second;
+                map<uint32_t, void *>::iterator found = vt.compressedPages.find(pageInfo);
+                if (found != vt.compressedPages.end())
+                {
+                    file_data = found->second;
+                    size = vt.compressedPagesSizes[pageInfo];
 
-                vt.compressedPages.erase(pageInfo);
-                vt.compressedPagesSizes.erase(pageInfo);
+                    vt.compressedPages.erase(found);
+                    vt.compressedPagesSizes.erase(pageInfo);
+                }
             }    // unlock
 
-            if (file_data && size) // this prevents problems because pages can be added twice because they are already loaded but not decompressed
+            if (file_data && size) // a page queued twice is in the maps only once, so its second entry finds nothing here
             {
                 #if DEBUG_LOG > 0
                     const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
@@ -356,6 +389,12 @@ void vtDecompressNeededPagesDecoupled()
                 void *image_data = vtDecompressImageBuffer(file_data, size, &vt.cfg.pageDimension);
 
                 free(file_data);
+                if (!image_data)
+                {
+                    vtPageLoadFailed(pageInfo);
+                    continue;
+                }
+
                 vtInsertPageIntoCacheLOCK(pageInfo, image_data);
 
                 {    // lock
@@ -396,7 +435,8 @@ void vtCachePages(queue<uint32_t> pagesToCache)
 
             void *image_data = vtDecompressImageFile(imagePath, &vt.cfg.pageDimension);
 
-            vtInsertPageIntoCacheLOCK(pageInfo, image_data);
+            if (image_data) // a page that fails here is loaded again when it is needed
+                vtInsertPageIntoCacheLOCK(pageInfo, image_data);
         }
     }
 }
