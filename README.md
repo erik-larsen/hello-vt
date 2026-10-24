@@ -4,7 +4,7 @@
 
 This is a complete yet minimal cross-platform virtual texturing library with a reference sample app.
 
-Virtual texturing is a technique for viewing textures which are larger than can fit in memory.  These mega textures are mipmapped and each mipmap level is tiled.  Each tile (also called a page) is stored on disk as a separate image file.  Tiles are then loaded on-demand based on the current view.  Rendering tiles is done in the main thread, with loading and decompressing of pages done asynchronously on one or two background threads, leading to smooth panning and zooming of these big textures.
+Virtual texturing is a technique for viewing textures which are larger than can fit in memory.  These mega textures are mipmapped and each mipmap level is tiled.  Each tile (also called a page) is stored on disk as a separate image file.  Tiles are then loaded on-demand based on the current view.  Rendering tiles is done in the main thread, with loading and decompressing of pages done asynchronously on background threads, leading to smooth panning and zooming of these big textures.
 
 This work is an OpenGLES-specific and modernized fork of [LibVT](https://github.com/core-code/LibVT?tab=readme-ov-file#readme) plus a cross-platform sample app.  Special thanks to [Julian Mayer](https://github.com/core-code) for his original implementation and thorough documentation.
 
@@ -139,9 +139,11 @@ underlying makefile can also be invoked directly:
 
 Unlike the native builds, the web build does not read tiles from disk. Tiles are
 fetched on demand from the web server via synchronous `emscripten_fetch()` calls
-made on the loader thread (a web worker), so the streaming pipeline is identical
-to the native build. Only the small static background texture is embedded in the
-preloaded data file.
+made on the loader threads (web workers), so the streaming pipeline is identical
+to the native build. There are 8 loader threads on the web (`LOADER_THREADS` in
+`libvt/LibVT_Config.h`), so several requests are in flight at once and network
+latency is not paid once per tile. Only the small static background texture is
+embedded in the preloaded data file.
 
 Note: the page must be served *cross-origin isolated* (with
 `Cross-Origin-Opener-Policy: same-origin` and

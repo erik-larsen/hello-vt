@@ -200,6 +200,7 @@ void vtLoadNeededPages()
             while (!vt.neededPages.empty() && i < pageLimit) // TODO: all this copying could use preallocation of necessary space (not only here)
             {
                 neededPages.push(vt.neededPages.front());
+                vt.loadingPages.insert(vt.neededPages.front());
                 vt.neededPages.pop_front();
                 ++i;
             }
@@ -224,6 +225,11 @@ void vtLoadNeededPages()
 
                 vtInsertPageIntoCacheLOCK(pageInfo, image_data);
             }
+
+            {    // lock
+                LOCK(vt.neededPagesMutex)
+                vt.loadingPages.erase(pageInfo);
+            }    // unlock
 
             // usleep(500000); // for testin' what happens when pages are loaded slowly
             {    // lock
@@ -252,10 +258,11 @@ void vtLoadNeededPagesDecoupled()
                     break;
             }
 
-            uint8_t i = 0;    
+            uint8_t i = 0;
             while (!vt.neededPages.empty() && i < pageLimit)
             {
                 neededPages.push(vt.neededPages.front());
+                vt.loadingPages.insert(vt.neededPages.front());
                 vt.neededPages.pop_front();
                 ++i;
             }
@@ -287,8 +294,14 @@ void vtLoadNeededPagesDecoupled()
                     vt.compressedPagesSizes.insert(pair<uint32_t, uint32_t>(pageInfo, file_size));
 
                     vt.compressedPagesAvailableCondition.notify_one();
+                    continue; // still loading until the decompressor has cached it
                 }    // unlock
             }
+
+            {    // lock
+                LOCK(vt.neededPagesMutex)
+                vt.loadingPages.erase(pageInfo);
+            }    // unlock
         }
     }
 }
@@ -344,6 +357,11 @@ void vtDecompressNeededPagesDecoupled()
 
                 free(file_data);
                 vtInsertPageIntoCacheLOCK(pageInfo, image_data);
+
+                {    // lock
+                    LOCK(vt.neededPagesMutex)
+                    vt.loadingPages.erase(pageInfo);
+                }    // unlock
 
                 {    // lock
                     LOCK(vt.newPagesMutex)
@@ -419,9 +437,11 @@ void vtInitPageLoader(const char *_tileDir)
                 vt.neededPages.push_back(MAKE_PAGE_INFO(i, x, y));
 
     #if ENABLE_MT == 1
-        vt.loaderThread = std::thread(&vtLoadNeededPages);
+        for (std::thread &loaderThread : vt.loaderThreads)
+            loaderThread = std::thread(&vtLoadNeededPages);
     #elif ENABLE_MT == 2
-        vt.loaderThread = std::thread(&vtLoadNeededPagesDecoupled);
+        for (std::thread &loaderThread : vt.loaderThreads)
+            loaderThread = std::thread(&vtLoadNeededPagesDecoupled);
         vt.decompressorThread = std::thread(&vtDecompressNeededPagesDecoupled);
     #endif
 }

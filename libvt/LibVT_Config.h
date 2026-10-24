@@ -164,7 +164,7 @@
  * Info:    Should be set to 0 unless a problem is being debugged <br>
  * Values:  0 - 3
  */
-#define DEBUG_LOG               2
+#define DEBUG_LOG               0
 
 /*!
  * @def     ENABLE_MT
@@ -173,6 +173,19 @@
  * Values:  0 - 2 (0 = no asynchronous page loading, 1 = asynchronous page loading using 1 additional thread, 2 = asynchronous page loading using 2 additional threads, one for loading and decompression respectively)
  */
 #define ENABLE_MT               2
+
+/*!
+ * @def     LOADER_THREADS
+ * @brief   The number of page loading threads, only takes effect if ENABLE_MT is 1 or 2 <br>
+ * Note:    Affects performance <br>
+ * Info:    On the web every page load is a blocking HTTP request, so several loader threads keep several requests in flight and hide the network latency; from disk one is enough. Each thread is a web worker, so PTHREAD_POOL_SIZE in Makefile.emscripten must be at least LOADER_THREADS + 1. <br>
+ * Values:  1 - 16
+ */
+#ifdef __EMSCRIPTEN__
+    #define LOADER_THREADS      8
+#else
+    #define LOADER_THREADS      1
+#endif
 
 /*!
  * @def     FALLBACK_ENTRIES

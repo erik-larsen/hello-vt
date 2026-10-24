@@ -89,7 +89,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
     queue<uint32_t>    tmpPages;
 
     map<uint32_t, uint16_t> tmpPages1;
-    multimap<uint16_t, uint32_t> tmpPages2;
+    multimap<uint32_t, uint32_t> tmpPages2;
 
     const uint32_t *buffer;
 
@@ -171,6 +171,23 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
                     vtTouchCachedPage(pageInfo);
 
                     vt.necessaryPageCount++;
+
+                    // also request the unmapped ancestors: they sort ahead of this page (see below),
+                    // and as each one arrives the fallback entries give a sharper stand-in for it
+                    uint16_t x_ancestor = x_coord, y_ancestor = y_coord;
+                    for (uint8_t mip_ancestor = mip + 1; mip_ancestor < vt.cfg.mipChainLength; mip_ancestor++)
+                    {
+                        x_ancestor >>= 1;
+                        y_ancestor >>= 1;
+                        if ((uint8_t) PAGE_TABLE(mip_ancestor, x_ancestor, y_ancestor) != kTableFree)
+                            break;
+
+                        const uint32_t ancestorInfo = MAKE_PAGE_INFO(mip_ancestor, x_ancestor, y_ancestor);
+
+                        tmpPages1[ancestorInfo] = 1;
+                        *((uint8_t *)&PAGE_TABLE(mip_ancestor, x_ancestor, y_ancestor)) = kTableMappingInProgress;
+                        vtTouchCachedPage(ancestorInfo);
+                    }
                 }
                 else if ((uint8_t) pageEntry == kTableMapped)    // if the page is mapped we need to mark it used
                 {
@@ -210,14 +227,14 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
 ///*2*/        printf("%i \n", (int)l.size());
 
     map<uint32_t, uint16_t>::iterator tmpPagesIter1;
-    multimap<uint16_t, uint32_t>::reverse_iterator tmpPagesIter2;
+    multimap<uint32_t, uint32_t>::reverse_iterator tmpPagesIter2;
 
 ///*1*/    printf("NEWFRAME\n\n");
 ///*1*/    for (tmpPagesIter1 = bla.begin(); tmpPagesIter1 != bla.end(); ++tmpPagesIter1)
 ///*1*/    printf("PAGE: %i %i\n", tmpPagesIter1->first, tmpPagesIter1->second);
 
-    for (tmpPagesIter1 = tmpPages1.begin(); tmpPagesIter1 != tmpPages1.end(); ++tmpPagesIter1) // pages sorting by importance
-        tmpPages2.insert(pair<uint16_t, uint32_t>(tmpPagesIter1->second, tmpPagesIter1->first));
+    for (tmpPagesIter1 = tmpPages1.begin(); tmpPagesIter1 != tmpPages1.end(); ++tmpPagesIter1) // pages sorting by importance: coarsest mip first, then most pixels
+        tmpPages2.insert(pair<uint32_t, uint32_t>((EXTRACT_MIP(tmpPagesIter1->first) << 16) | tmpPagesIter1->second, tmpPagesIter1->first));
     for (tmpPagesIter2 = tmpPages2.rbegin(); tmpPagesIter2 != tmpPages2.rend(); ++tmpPagesIter2)
         tmpPages.push(tmpPagesIter2->second);
 
@@ -243,9 +260,12 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
         {
             while (!nonCachedPages.empty())
             {
-                const uint32_t pageInfo = nonCachedPages.front();
+                const uint32_t pageInfo = nonCachedPages.front();nonCachedPages.pop();
 
-                vt.neededPages.push_back(pageInfo);nonCachedPages.pop();
+                if (vt.loadingPages.count(pageInfo)) // a loader thread already has it, it stays marked as mapping in progress
+                    continue;
+
+                vt.neededPages.push_back(pageInfo);
 
                 #if DEBUG_LOG > 0
                     const uint16_t y_coord = EXTRACT_Y(pageInfo), x_coord = EXTRACT_X(pageInfo);
@@ -255,7 +275,7 @@ void vtExtractNeededPages(const uint32_t *ext_buffer_BGRA)
             }
 
 #if ENABLE_MT
-            vt.neededPagesAvailableCondition.notify_one(); // wake up page loading thread if it is sleeping
+            vt.neededPagesAvailableCondition.notify_all(); // wake up the page loading threads that are sleeping
 #endif
         }
     }    // unlock

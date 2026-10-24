@@ -8,6 +8,10 @@ Define `ENABLE_MT` as follows to control threading:
 * **1** - One main thread, and one background thread for page loading from disk.
 * **2** - One main thread, and two background threads: one for page loading, the other for decompression.
 
+`LOADER_THREADS` sets how many page loading threads there are (1 natively, 8 on the web). On the web each load is a blocking HTTP request, so several loaders keep several requests in flight instead of paying the network latency once per page.
+
+The main thread asks for pages coarsest mip first, and also asks for the unloaded ancestors of each missing page, so the view sharpens step by step while the exact pages are still on their way.
+
 ### Components
 
 * **Pages** are texture tiles from the tiled mipmap pyramid stored on disk.
@@ -35,6 +39,7 @@ One-at-a-time access to the `neededPages` queue. Main thread produces requests (
 * **Who uses it**:
   * **Producer (Main Thread)**: When the main thread renders a frame, it identifies missing pages and `push_back`s them into the `neededPages` queue. It must lock this mutex to do so.
   * **Consumer (Background Thread)**: The `vtLoadNeededPages` function (running in a background thread) locks this mutex to safely check if the queue is empty and to `pop_front` page requests to begin loading them.
+* **Also protects**: The `loadingPages` set, the pages a loader thread has taken from `neededPages` but not yet put in the in-memory page cache. The main thread skips these when it rebuilds `neededPages`, so no page is fetched twice.
 * **Why it's needed**: Without it, the main thread could be adding a page to the queue at the exact same moment the background thread is trying to remove one, corrupting the queue's internal state.
 
 #### 2. **`neededPagesAvailableCondition`**
@@ -44,7 +49,7 @@ Messaging for the `neededPages` queue, such that the Background consuming thread
 * **Coordinates**: The `neededPages` workflow. It's the communication channel between the main thread (producer) and the background thread (consumer).
 * **Who uses it**:
   * **Waiter (Background Thread)**: In `vtLoadNeededPages`, if the thread wakes up and finds the `neededPages` queue is empty, it calls `wait()` on this condition variable. This puts the thread to sleep, consuming no CPU, until there is work to do.
-  * **Notifier (Main Thread)**: After the main thread adds one or more pages to the `neededPages` queue, it calls `notify_one()` on this condition variable to wake up the sleeping background thread.
+  * **Notifier (Main Thread)**: After the main thread adds one or more pages to the `neededPages` queue, it calls `notify_all()` on this condition variable to wake up the sleeping loader threads.
 * **Why it's needed**: This is the key to efficiency. Instead of the background thread running a `while(true)` loop that constantly locks the mutex and checks the queue size, it can sleep peacefully, knowing it will be woken up precisely when new work is available.
 
 #### 3. **`newPagesMutex`**

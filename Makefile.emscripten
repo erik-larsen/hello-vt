@@ -14,6 +14,8 @@
 #   background texture (texmap.png) is preloaded into MEMFS.
 # - pthreads require the page to be served cross-origin isolated (COOP/COEP
 #   headers); use scripts/serve.py, NOT a plain `python3 -m http.server`.
+# - PTHREAD_POOL_SIZE covers LibVT's LOADER_THREADS (8 on the web, see
+#   libvt/LibVT_Config.h) plus its one decompressor thread.
 
 SRC = $(wildcard libvt/*.cpp) $(wildcard sample/*.cpp)
 
@@ -30,7 +32,7 @@ CFLAGS = -std=c++11 -Wall $(OPT) \
 	-sUSE_SDL=2 -sUSE_SDL_IMAGE=2 -sSDL2_IMAGE_FORMATS='["png"]'
 
 LDFLAGS = \
-	-pthread -sPTHREAD_POOL_SIZE=4 \
+	-pthread -sPTHREAD_POOL_SIZE=9 \
 	-sFETCH \
 	-sFULL_ES2 -sMIN_WEBGL_VERSION=1 -sMAX_WEBGL_VERSION=1 \
 	-sINITIAL_MEMORY=256MB \

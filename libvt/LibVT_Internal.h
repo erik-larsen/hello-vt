@@ -28,6 +28,7 @@
 
 #include <queue>
 #include <map>
+#include <set>
 #include <string>
 
 #include <thread>
@@ -158,12 +159,13 @@ struct vtData
     double                  projectionMatrix[4][4];
     double                  fovInDegrees;
     deque<uint32_t>         neededPages;
+    set<uint32_t>           loadingPages;   // taken from neededPages by a loader but not yet in the RAM cache, guarded by neededPagesMutex
     queue<uint32_t>         newPages;
     map<uint32_t, void *>   cachedPages;
     map<uint32_t, clock_t>  cachedPagesAccessTimes;
 
 #if ENABLE_MT
-    std::thread             loaderThread;
+    std::thread             loaderThreads[LOADER_THREADS];
     std::atomic<bool>       shutdownThreads{false};
     std::condition_variable neededPagesAvailableCondition;
     std::mutex              neededPagesMutex;

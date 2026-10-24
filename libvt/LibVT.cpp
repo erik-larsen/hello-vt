@@ -150,8 +150,10 @@ void vtShutdown()
     #endif
 
     // Wait for threads to finish
-    if (vt.loaderThread.joinable()) {
-        vt.loaderThread.join();
+    for (std::thread &loaderThread : vt.loaderThreads) {
+        if (loaderThread.joinable()) {
+            loaderThread.join();
+        }
     }
     #if ENABLE_MT > 1
         if (vt.decompressorThread.joinable()) {
